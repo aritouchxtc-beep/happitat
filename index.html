@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Happitat Project (Event Inventory &amp; Shift Counter)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  /* กันฟอร์มส่งแบบปกติ (ซึ่งทำให้หน้าเปลี่ยนเป็น userCodeAppPanel ว่างเปล่า) และโชว์ error บนจอ */
+  document.addEventListener('submit', function (e) { e.preventDefault(); }, true);
+  window.addEventListener('error', function (e) {
+    var b = document.getElementById('fatal');
+    if (!b) return;
+    var line = '';
+    try { line = document.documentElement.outerHTML.split('\n')[e.lineno - 1] || ''; } catch (x) {}
+    b.textContent = 'เกิดข้อผิดพลาด: ' + (e.message || e) + ' (บรรทัด ' + e.lineno + ':' + e.colno + ') ' + line.trim().slice(0, 120);
+    b.style.display = 'block';
+  });
+</script>
+<style>
+  :root{
+    --shelf:#1E5A44;      /* เขียวหัวตารางชีต */
+    --shelf-deep:#123B2C;
+    --mist:#E9EFEB;
+    --paper:#FFFFFF;
+    --ink:#16211C;
+    --muted:#5E6B64;
+    --line:#CFD9D3;
+    --amber:#F2B233;
+    --red:#B83A26;
+    --radius-s:6px; --radius-l:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:'Anuphan',system-ui,sans-serif;background:var(--mist);color:var(--ink);font-size:16px;line-height:1.5}
+  button,input,select,textarea{font:inherit;color:inherit}
+  :focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+  .hidden,[hidden]{display:none!important}
+
+  /* ---------- login ---------- */
+  #login{min-height:100%;display:grid;place-items:center;padding:24px 16px;
+    background:linear-gradient(var(--shelf) 0 38%, var(--mist) 38% 100%)}
+  .tag{width:100%;max-width:400px;background:var(--paper);border-radius:var(--radius-l);
+    position:relative;padding:44px 28px 28px;box-shadow:0 18px 40px -22px rgba(18,59,44,.55)}
+  .tag::before{content:"";position:absolute;top:16px;left:50%;width:14px;height:14px;margin-left:-7px;
+    border-radius:50%;background:var(--mist);box-shadow:inset 0 1px 2px rgba(0,0,0,.25)}
+  .brand{text-align:center;margin-bottom:26px}
+  .brand h1{margin:0;font-size:2.15rem;line-height:1.1;font-weight:700;letter-spacing:-.02em;color:var(--shelf)}
+  .brand p{margin:6px 0 0;font-size:.98rem;color:var(--muted);font-weight:500}
+  .perf{border:0;border-top:2px dashed var(--line);margin:0 -28px 24px}
+  label{display:block;font-size:.9rem;font-weight:600;margin:0 0 6px}
+  .field{margin-bottom:16px}
+  input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--radius-s);background:#fff}
+  input:focus,select:focus,textarea:focus{border-color:var(--shelf);outline:none;box-shadow:0 0 0 3px rgba(30,90,68,.18)}
+  .pw{position:relative}
+  .pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;
+    color:var(--shelf);font-weight:600;font-size:.85rem;padding:8px;cursor:pointer}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px 16px;
+    border:0;border-radius:var(--radius-s);background:var(--shelf);color:#fff;font-weight:600;cursor:pointer}
+  .btn:hover{background:var(--shelf-deep)}
+  .btn[disabled]{opacity:.6;cursor:wait}
+  .btn.ghost{background:#fff;color:var(--shelf);border:1.5px solid var(--line);width:auto}
+  .err{color:var(--red);font-size:.9rem;min-height:1.4em;margin:4px 0 12px}
+  .foot{text-align:center;color:var(--muted);font-size:.8rem;margin-top:18px}
+
+  /* ---------- app ---------- */
+  header.bar{background:var(--shelf);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+  header.bar .t{flex:1;min-width:0}
+  header.bar strong{display:block;font-size:1.05rem}
+  header.bar span{font-size:.85rem;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+  header.bar button{background:transparent;border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:var(--radius-s);padding:6px 12px;cursor:pointer}
+  nav.tabs{display:flex;background:var(--paper);border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:60px;z-index:4}
+  nav.tabs button{flex:1;min-width:88px;border:0;background:none;padding:13px 8px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+  nav.tabs button[aria-selected="true"]{color:var(--shelf);border-bottom-color:var(--shelf)}
+  main{max-width:640px;margin:0 auto;padding:18px 16px 60px}
+  .panel{background:var(--paper);border-radius:var(--radius-l);padding:20px;border:1px solid var(--line)}
+  .panel h2{margin:0 0 4px;font-size:1.25rem}
+  .panel .sub{margin:0 0 18px;color:var(--muted);font-size:.92rem}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .picker{display:flex;gap:8px}
+  .picker input{flex:1}
+  .picker .btn{width:auto;padding:0 14px;white-space:nowrap}
+  .item-desc{margin-top:8px;font-size:.92rem;color:var(--muted);min-height:1.4em}
+  .item-desc.miss{color:var(--red);font-weight:500}
+  .item-desc.found{background:var(--mist);border-left:4px solid var(--shelf);border-radius:var(--radius-s);padding:10px 12px;color:var(--ink)}
+  .item-desc.found b{display:block;font-size:1.05rem;line-height:1.35;overflow-wrap:anywhere}
+  .item-desc.found span{font-size:.85rem;color:var(--muted)}
+  .item-desc.flash{animation:flash .9s ease-out}
+  @keyframes flash{from{background:#cfeedd}to{background:var(--mist)}}
+  .calc{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 18px}
+  .calc div{background:var(--mist);border-radius:var(--radius-s);padding:10px 12px}
+  .calc small{display:block;color:var(--muted);font-size:.82rem}
+  .calc b{font-size:1.5rem}
+  .calc .neg b{color:var(--red)} .calc .pos b{color:#8a6100}
+  .linkbtn{border:0;background:none;color:var(--shelf);font-weight:600;padding:0;cursor:pointer;font-size:.85rem;text-decoration:underline}
+  .thumb{max-width:120px;border-radius:var(--radius-s);margin-top:8px;display:block}
+  .table-wrap{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:var(--radius-s)}
+  table{border-collapse:collapse;width:100%;font-size:.85rem}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{background:var(--shelf);color:#fff;font-weight:600}
+  td a{color:var(--shelf)}
+  .empty{padding:24px;text-align:center;color:var(--muted)}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;
+    padding:12px 18px;border-radius:var(--radius-s);font-size:.95rem;max-width:90vw;z-index:20}
+  #toast.bad{background:var(--red)}
+  #qr-tmp{display:none}
+  #scanner{position:fixed;inset:0;z-index:30;background:#000;color:#fff;overflow:hidden}
+  #sc-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .sc-frame{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);
+    width:min(62vw,300px);height:min(62vw,300px);border-radius:4px;
+    box-shadow:0 0 0 200vmax rgba(0,0,0,.52);transition:width .2s,height .2s}
+  #scanner[data-mode="bar"] .sc-frame{width:min(84vw,420px);height:min(30vw,150px)}
+  .sc-frame i{position:absolute;width:28px;height:28px;border:0 solid #fff}
+  .sc-frame i:nth-child(1){top:-2px;left:-2px;border-top-width:4px;border-left-width:4px}
+  .sc-frame i:nth-child(2){top:-2px;right:-2px;border-top-width:4px;border-right-width:4px}
+  .sc-frame i:nth-child(3){bottom:-2px;left:-2px;border-bottom-width:4px;border-left-width:4px}
+  .sc-frame i:nth-child(4){bottom:-2px;right:-2px;border-bottom-width:4px;border-right-width:4px}
+  .sc-line{position:absolute;left:6%;right:6%;top:10%;height:2px;background:#fff;
+    box-shadow:0 0 8px rgba(255,255,255,.9);opacity:.9}
+  @media (prefers-reduced-motion:no-preference){
+    .sc-line{animation:scanline 2.2s ease-in-out infinite alternate}
+    @keyframes scanline{from{top:8%}to{top:90%}}}
+  .sc-frame.hit i{border-color:#4ade80}
+  .sc-frame.hit .sc-line{background:#4ade80;box-shadow:0 0 10px #4ade80}
+  .sc-hint{position:absolute;left:0;right:0;text-align:center;font-size:1rem;font-weight:500;
+    text-shadow:0 1px 3px rgba(0,0,0,.6);padding:0 20px}
+  .sc-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:14px}
+  .sc-icon{width:44px;height:44px;border-radius:50%;border:0;background:transparent;color:#fff;
+    font-size:1.25rem;display:grid;place-items:center;cursor:pointer}
+  .sc-icon[aria-pressed="true"]{background:var(--amber);color:var(--ink)}
+  .sc-bottom{position:absolute;left:0;right:0;bottom:0;padding:16px 16px 26px;background:linear-gradient(transparent,rgba(0,0,0,.75) 45%);display:flex;flex-direction:column;align-items:center;gap:14px}
+  .sc-zoom{display:flex;gap:6px;background:rgba(0,0,0,.45);border-radius:999px;padding:4px}
+  .sc-zoom button{min-width:46px;padding:6px 8px;border:0;border-radius:999px;background:none;color:#fff;font-weight:600;cursor:pointer}
+  .sc-zoom button[aria-pressed="true"]{background:#fff;color:var(--ink)}
+  .sc-mode{display:flex;gap:40px}
+  .sc-mode button{background:none;border:0;color:rgba(255,255,255,.6);font-size:.85rem;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px}
+  .sc-mode button svg{width:30px;height:30px}
+  .sc-mode button[aria-pressed="true"]{color:#5aa9ff}
+  .sc-photo{background:none;border:0;color:rgba(255,255,255,.8);text-decoration:underline;font-size:.9rem;cursor:pointer}
+  @media (max-width:420px){.row{grid-template-columns:1fr}}
+  @media (prefers-reduced-motion:no-preference){.tag{animation:drop .5s ease-out}
+    @keyframes drop{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+<div id="fatal" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99;background:#B83A26;color:#fff;padding:10px 14px;font-size:14px"></div>
+
+<!-- ================= LOGIN ================= -->
+<section id="login">
+  <div class="tag" id="loginForm">
+    <div class="brand">
+      <h1>Happitat Project</h1>
+      <p>(Event Inventory &amp; Shift Counter)</p>
+    </div>
+    <hr class="perf">
+    <div class="field">
+      <label for="lgUser">รหัสพนักงาน</label>
+      <input id="lgUser" name="username" inputmode="numeric" autocomplete="username" placeholder="เช่น 00054216" required>
+    </div>
+    <div class="field">
+      <label for="lgPass">รหัสผ่าน</label>
+      <div class="pw">
+        <input id="lgPass" name="password" type="password" autocomplete="current-password" required>
+        <button type="button" id="pwToggle" aria-label="แสดงรหัสผ่าน">แสดง</button>
+      </div>
+    </div>
+    <div class="field" id="apiBox" hidden>
+      <label for="apiUrl">ลิงก์เชื่อมต่อระบบ (ตั้งครั้งเดียว)</label>
+      <input id="apiUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+    </div>
+    <div class="err" id="lgErr" role="alert"></div>
+    <button class="btn" id="lgBtn" type="button">เข้าสู่ระบบ</button>
+    <div class="foot">ST175 · Off-site shop / Pop-up shop</div>
+    <div class="foot"><button type="button" class="linkbtn" id="apiEdit" hidden>เปลี่ยนลิงก์เชื่อมต่อ</button></div>
+  </div>
+</section>
+
+<!-- ================= APP ================= -->
+<section id="app" class="hidden">
+  <header class="bar">
+    <div class="t">
+      <strong>Happitat Project</strong>
+      <span id="who"></span>
+    </div>
+    <button id="logoutBtn" type="button">ออกจากระบบ</button>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="count" aria-selected="true">นับสต็อก</button>
+    <button role="tab" data-tab="shift" aria-selected="false">สรุปกะ</button>
+    <button role="tab" data-tab="adj" aria-selected="false">ปรับสต็อก</button>
+    <button role="tab" data-tab="hist" aria-selected="false">ประวัติ</button>
+  </nav>
+
+  <main>
+    <!-- นับสต็อก -->
+    <form class="panel" id="tab-count" action="javascript:void(0)">
+      <h2>นับสต็อกหน้าบูธ</h2>
+      <p class="sub">บันทึกลงชีต inventory_EL</p>
+      <div class="field">
+        <label for="cnt-code">สินค้า</label>
+        <div class="picker">
+          <input id="cnt-code" list="itemList" placeholder="พิมพ์รหัสหรือชื่อสินค้า" autocomplete="off">
+          <button type="button" class="btn ghost" data-scan="cnt-code">สแกน</button>
+        </div>
+        <div class="item-desc" id="cnt-code-desc"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="cnt-loose">จำนวนชิ้นแยก (Loose)</label><input id="cnt-loose" type="number" min="0" inputmode="numeric" value="0"></div>
+        <div class="field"><label for="cnt-total">จำนวนรวม (Total)</label><input id="cnt-total" type="number" min="0" inputmode="numeric" required></div>
+      </div>
+      <div class="field">
+        <label for="cnt-img">รูปถ่ายประกอบ (ไม่บังคับ)</label>
+        <input id="cnt-img" type="file" accept="image/*" capture="environment">
+        <img id="cnt-preview" class="thumb hidden" alt="ตัวอย่างรูป">
+      </div>
+      <button class="btn" type="submit">บันทึกยอดนับ</button>
+    </form>
+
+    <!-- สรุปกะ -->
+    <form class="panel hidden" id="tab-shift" action="javascript:void(0)">
+      <h2>สรุปยอดปิดกะ</h2>
+      <p class="sub">บันทึกลงชีต shift_summary ระบบคำนวณยอดที่ควรเหลือและส่วนต่างให้</p>
+      <div class="row">
+        <div class="field"><label for="sh-date">วันที่</label><input id="sh-date" type="date" required></div>
+        <div class="field"><label for="sh-shift">กะ</label>
+          <select id="sh-shift" class="shift-select" required></select></div>
+      </div>
+      <div class="field">
+        <label for="sh-code">สินค้า</label>
+        <div class="picker">
+          <input id="sh-code" list="itemList" placeholder="พิมพ์รหัสหรือชื่อสินค้า" autocomplete="off">
+          <button type="button" class="btn ghost" data-scan="sh-code">สแกน</button>
+        </div>
+        <div class="item-desc" id="sh-code-desc"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="sh-open">ยอดยกมา (Opening)</label>
+          <input id="sh-open" type="number" min="0" inputmode="numeric" value="0">
+          <button type="button" class="linkbtn" id="sh-fill">ดึงยอดนับจริงกะก่อน</button></div>
+        <div class="field"><label for="sh-restock">รับเติมระหว่างกะ</label><input id="sh-restock" type="number" min="0" inputmode="numeric" value="0"></div>
+        <div class="field"><label for="sh-sales">ขายออก</label><input id="sh-sales" type="number" min="0" inputmode="numeric" value="0"></div>
+        <div class="field"><label for="sh-actual">นับได้จริง</label><input id="sh-actual" type="number" min="0" inputmode="numeric" required></div>
+      </div>
+      <div class="calc">
+        <div><small>ควรเหลือ</small><b id="sh-exp">0</b></div>
+        <div id="sh-diffbox"><small>ส่วนต่าง</small><b id="sh-diff">–</b></div>
+      </div>
+      <div class="field"><label for="sh-remark">หมายเหตุ</label><textarea id="sh-remark" rows="2" placeholder="ถ้ายอดไม่ตรง ระบุสาเหตุ"></textarea></div>
+      <button class="btn" type="submit">บันทึกสรุปกะ</button>
+    </form>
+
+    <!-- ปรับสต็อก -->
+    <form class="panel hidden" id="tab-adj" action="javascript:void(0)">
+      <h2>ปรับสต็อก</h2>
+      <p class="sub">รับเข้า ชำรุด โอนออก หรือปรับยอด บันทึกลงชีต stock_adjustments</p>
+      <div class="row">
+        <div class="field"><label for="adj-type">ประเภท</label>
+          <select id="adj-type" required>
+            <option value="">เลือกประเภท</option>
+            <option>รับเข้า</option><option>คืนจากลูกค้า</option>
+            <option>ชำรุด/เสียหาย</option><option>โอนออก</option><option>สูญหาย</option>
+            <option>ปรับยอด</option>
+          </select></div>
+        <div class="field"><label for="adj-shift">กะ</label><select id="adj-shift" class="shift-select"></select></div>
+      </div>
+      <div class="field">
+        <label for="adj-code">สินค้า</label>
+        <div class="picker">
+          <input id="adj-code" list="itemList" placeholder="พิมพ์รหัสหรือชื่อสินค้า" autocomplete="off">
+          <button type="button" class="btn ghost" data-scan="adj-code">สแกน</button>
+        </div>
+        <div class="item-desc" id="adj-code-desc"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="adj-qty">จำนวน</label><input id="adj-qty" type="number" inputmode="numeric" required>
+          <small style="color:var(--muted)">ประเภท "ปรับยอด" ใส่ติดลบได้</small></div>
+        <div class="field"><label for="adj-appr">ผู้อนุมัติ</label><input id="adj-appr" placeholder="ชื่อหัวหน้ากะ"></div>
+      </div>
+      <div class="field"><label for="adj-remark">หมายเหตุ</label><textarea id="adj-remark" rows="2"></textarea></div>
+      <button class="btn" type="submit">บันทึกการปรับสต็อก</button>
+    </form>
+
+    <!-- ประวัติ -->
+    <section class="panel hidden" id="tab-hist">
+      <h2>รายการล่าสุด</h2>
+      <p class="sub">30 รายการล่าสุด เรียงจากใหม่ไปเก่า</p>
+      <div class="row">
+        <select id="hist-which">
+          <option value="inv">นับสต็อก (inventory_EL)</option>
+          <option value="shift">สรุปกะ (shift_summary)</option>
+          <option value="adj">ปรับสต็อก (stock_adjustments)</option>
+        </select>
+        <button class="btn ghost" id="hist-load" type="button" style="width:100%">โหลดรายการ</button>
+      </div>
+      <div class="table-wrap" id="hist-out"><div class="empty">กด "โหลดรายการ" เพื่อดูข้อมูล</div></div>
+    </section>
+  </main>
+</section>
+
+<datalist id="itemList"></datalist>
+<input type="file" id="qr-file" accept="image/*" capture="environment" class="hidden">
+<div id="qr-tmp"></div>
+<div id="scanner" hidden role="dialog" aria-label="สแกนรหัสสินค้า" data-mode="qr">
+  <video id="sc-video" playsinline muted autoplay></video>
+  <div class="sc-frame" id="sc-frame"><i></i><i></i><i></i><i></i><div class="sc-line"></div></div>
+  <p class="sc-hint" id="sc-hint">วางรหัส QR ในกรอบ</p>
+  <div class="sc-top">
+    <button type="button" class="sc-icon" id="sc-torch" aria-label="ไฟฉาย" aria-pressed="false" hidden><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button>
+    <span></span>
+    <button type="button" class="sc-icon" id="sc-close" aria-label="ปิด" style="font-size:1.4rem">✕</button>
+  </div>
+  <div class="sc-bottom">
+    <div class="sc-zoom" id="sc-zoom" hidden></div>
+    <div class="sc-mode" role="group" aria-label="ชนิดโค้ด">
+      <button type="button" data-mode="qr" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20h2M20 14v2"/></svg>รหัส QR</button>
+      <button type="button" data-mode="bar" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 5v14M6 5v14M10 5v14M12 5v14M15 5v14M19 5v14M21 5v14"/></svg>บาร์โค้ด</button>
+    </div>
+    <button type="button" class="sc-photo" id="sc-photo" hidden>ถ่ายรูปแทน</button>
+  </div>
+</div>
+
+<div id="toast" class="hidden" role="status"></div>
+
+<script>
+const SHIFTS = ['กะเช้า','กะบ่าย','กะเย็น'];
+const S = { token:null, profile:null, items:{}, barcodes:{}, scanTarget:null, img:null };
+const $ = id => document.getElementById(id);
+
+/* ---------- storage (กันพังถ้าเบราว์เซอร์บล็อก) ---------- */
+const store = {
+  get(){ try{ return sessionStorage.getItem('happitat_token'); }catch(e){ return null; } },
+  set(v){ try{ sessionStorage.setItem('happitat_token', v); }catch(e){} },
+  clear(){ try{ sessionStorage.removeItem('happitat_token'); }catch(e){} }
+};
+
+/* ---------- server call ----------
+   เปิดผ่าน Apps Script → ใช้ google.script.run
+   เปิดจากเว็บภายนอก (GitHub Pages ฯลฯ) → ยิงไปที่ API_URL (ลิงก์ /exec) */
+const API_URL = '';   // ปล่อยว่างได้ ระบบจะให้วางลิงก์ /exec ที่หน้า login ครั้งแรก แล้วจำไว้ในเครื่อง
+function apiUrl(){
+  if (API_URL) return API_URL;
+  try { return localStorage.getItem('happitat_api') || ''; } catch(e){ return ''; }
+}
+function validApi(u){
+  u = String(u || '').trim();
+  return u.indexOf('https://script.google.com/macros/s/') === 0 && u.indexOf('/exec') > 35;
+}
+const IN_GAS = !!(window.google && google.script && google.script.run);
+
+function api(fn, ...args){
+  const fail = msg => {
+    if (msg.includes('SESSION_EXPIRED')) showLogin('หมดเวลาใช้งาน เข้าสู่ระบบอีกครั้ง');
+    return new Error(msg.indexOf('Error: ') === 0 ? msg.slice(7) : msg);
+  };
+  if (IN_GAS) {
+    return new Promise((resolve, reject) => {
+      google.script.run.withSuccessHandler(resolve)
+        .withFailureHandler(err => reject(fail((err && err.message) || String(err))))[fn](...args);
+    });
+  }
+  if (!validApi(apiUrl())) {
+    $('apiBox').hidden = false;
+    return Promise.reject(new Error('วางลิงก์ /exec ของ Apps Script ในช่องลิงก์เชื่อมต่อก่อน'));
+  }
+  return fetch(apiUrl().trim(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // แบบนี้ไม่ติด CORS
+    body: JSON.stringify({ fn, args })
+  })
+  .catch(() => { throw new Error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ต'); })
+  .then(r => r.json())
+  .then(j => { if (!j.ok) throw fail(j.error || 'เกิดข้อผิดพลาด'); return j.data; });
+}
+
+function toast(msg, bad){
+  const t = $('toast'); t.textContent = msg; t.className = bad ? 'bad' : '';
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 3200);
+}
+
+/* ---------- login ---------- */
+$('pwToggle').onclick = () => {
+  const p = $('lgPass'), show = p.type === 'password';
+  p.type = show ? 'text' : 'password';
+  $('pwToggle').textContent = show ? 'ซ่อน' : 'แสดง';
+};
+
+async function doLogin(){
+  if ($('lgBtn').disabled) return;
+  if (!IN_GAS && !$('apiBox').hidden) {
+    const u = $('apiUrl').value.trim();
+    if (!validApi(u)) { $('lgErr').textContent = 'ลิงก์ต้องขึ้นต้นด้วย https://script.google.com/macros/s/ และลงท้ายด้วย /exec'; return; }
+    try { localStorage.setItem('happitat_api', u); } catch(e){}
+  }
+  $('lgErr').textContent = ''; $('lgBtn').disabled = true; $('lgBtn').textContent = 'กำลังตรวจสอบ…';
+  try {
+    const r = await api('login', $('lgUser').value, $('lgPass').value);
+    S.token = r.token; S.profile = r.profile; store.set(r.token);
+    $('lgPass').value = '';
+    await enterApp();
+  } catch(err) {
+    $('lgErr').textContent = err.message;
+  } finally {
+    $('lgBtn').disabled = false; $('lgBtn').textContent = 'เข้าสู่ระบบ';
+  }
+}
+$('lgBtn').addEventListener('click', doLogin);
+if (!IN_GAS) {
+  if (!validApi(apiUrl())) $('apiBox').hidden = false;
+  else if (!API_URL) $('apiEdit').hidden = false;
+  $('apiEdit').onclick = () => { $('apiUrl').value = apiUrl(); $('apiBox').hidden = false; $('apiEdit').hidden = true; };
+}
+$('apiUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
+['lgUser','lgPass'].forEach(id => $(id).addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
+}));
+
+function showLogin(msg){
+  S.token = null; S.profile = null; store.clear();
+  $('app').classList.add('hidden'); $('login').classList.remove('hidden');
+  $('lgErr').textContent = msg || '';
+}
+
+$('logoutBtn').onclick = async () => {
+  try { await api('logout', S.token); } catch(e) {}
+  showLogin('');
+};
+
+async function enterApp(){
+  const p = S.profile;
+  $('who').textContent = p.name + ' · ' + p.department + (p.role ? ' · ' + p.role : '');
+  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  setupShifts(); $('sh-date').value = todayISO();
+  try {
+    const list = await api('getItems', S.token);
+    S.items = {}; S.barcodes = {}; const dl = $('itemList'); dl.innerHTML = '';
+    list.forEach(it => {
+      S.items[it.code] = it;
+      String(it.barcode||'').split(',').join(' ').split(' ').map(x => x.trim()).filter(Boolean).forEach(bc => S.barcodes[bc] = it.code);
+      const o = document.createElement('option'); o.value = it.code; o.label = it.desc; o.textContent = it.desc;
+      dl.appendChild(o);
+    });
+    if (!list.length) toast('ยังไม่มีรายการสินค้าในชีต description / master_items', true);
+  } catch(e){ toast(e.message, true); }
+}
+
+/* ---------- helpers ---------- */
+function todayISO(){ const d = new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function isoToThai(v){ if(!v) return ''; const [y,m,d] = v.split('-'); return d+'/'+m+'/'+y; }
+function guessShift(){ const h = new Date().getHours(); return h < 12 ? SHIFTS[0] : h < 17 ? SHIFTS[1] : SHIFTS[2]; }
+function setupShifts(){
+  document.querySelectorAll('.shift-select').forEach(sel => {
+    sel.innerHTML = SHIFTS.map(s => '<option>' + s + '</option>').join('');
+    sel.value = guessShift();
+  });
+}
+function n(id){ const v = Number($(id).value); return isFinite(v) ? v : 0; }
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  ['count','shift','adj','hist'].forEach(t => $('tab-'+t).classList.toggle('hidden', t !== b.dataset.tab));
+});
+
+/* ---------- item picker ---------- */
+function resolveItem(inputId){
+  const raw = $(inputId).value.trim(), box = $(inputId+'-desc');
+  let it = S.items[raw];
+  if (!it && raw) {
+    const q = raw.toLowerCase();
+    it = Object.values(S.items).find(x => x.desc.toLowerCase().includes(q));
+    if (it) $(inputId).value = it.code;
+  }
+  if (it) {
+    box.innerHTML = '<b>' + esc(it.desc || '-') + '</b><span>รหัส ' + esc(it.code) +
+      (it.price ? ' · ราคา ' + esc(it.price) + ' บาท' : '') + '</span>';
+  } else box.textContent = raw ? 'ไม่พบรหัส ' + raw + ' ในรายการสินค้า' : '';
+  box.classList.toggle('found', !!it);
+  box.classList.toggle('miss', !it && !!raw);
+  return it || null;
+}
+['cnt-code','sh-code','adj-code'].forEach(id => {
+  $(id).addEventListener('change', () => resolveItem(id));
+  $(id).addEventListener('blur', () => resolveItem(id));
+});
+
+function loadScanner(){
+  if (window.Html5Qrcode) return Promise.resolve();
+  return new Promise((ok, fail) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+    sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc);
+  });
+}
+/* ---------- สแกนบาร์โค้ด / QR: เปิดกล้องถ่ายรูปแล้วอ่านโค้ดในเครื่อง ----------
+   Apps Script แสดงหน้าเว็บใน iframe ที่ไม่อนุญาตกล้องสด จึงใช้กล้องถ่ายรูปของเครื่องแทน */
+const BC_FORMATS = ['qr_code','ean_13','ean_8','upc_a','upc_e','code_128','code_39','code_93','itf','codabar'];
+
+function applyScan(text){
+  let code = String(text).trim();
+  if (S.barcodes[code]) code = S.barcodes[code];          // บาร์โค้ด EAN → Item Code
+  $(S.scanTarget).value = code;
+  const it = resolveItem(S.scanTarget), box = $(S.scanTarget + '-desc');
+  if (navigator.vibrate) navigator.vibrate(it ? 80 : [60, 60, 60]);
+  box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash');
+  box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const next = { 'cnt-code': 'cnt-total', 'sh-code': 'sh-actual', 'adj-code': 'adj-qty' }[S.scanTarget];
+  if (it && next) setTimeout(() => $(next).focus(), 350);   // ไปช่องใส่จำนวนต่อทันที
+  if (!it) toast('อ่านได้รหัส ' + code + ' แต่ไม่พบในรายการสินค้า', true);
+}
+
+function fileToCanvas(file, maxSide){
+  return new Promise((ok, fail) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); ok(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('เปิดรูปไม่ได้')); };
+    img.src = url;
+  });
+}
+
+async function nativeDetect(canvas){
+  if (!('BarcodeDetector' in window)) return null;
+  try {
+    const supported = await BarcodeDetector.getSupportedFormats();
+    const formats = BC_FORMATS.filter(f => supported.includes(f));
+    if (!formats.length) return null;
+    const found = await new BarcodeDetector({ formats }).detect(canvas);
+    return found.length ? found[0].rawValue : null;
+  } catch(e){ return null; }
+}
+
+async function libDetect(canvas){
+  await loadScanner();
+  const F = window.Html5QrcodeSupportedFormats;
+  const reader = new Html5Qrcode('qr-tmp', {
+    formatsToSupport: [F.QR_CODE, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.CODE_93, F.ITF, F.CODABAR],
+    verbose: false
+  });
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', .92));
+  try { return await reader.scanFile(new File([blob], 'scan.jpg', { type: 'image/jpeg' }), false); }
+  finally { try { reader.clear(); } catch(e){} }
+}
+
+async function decodePhoto(file){
+  for (const size of [1600, 1000, 2400]) {                // ลองหลายขนาด เพิ่มโอกาสอ่านบาร์โค้ดเส้น
+    const c = await fileToCanvas(file, size);
+    const hit = await nativeDetect(c);
+    if (hit) return hit;
+    try { const t = await libDetect(c); if (t) return t; } catch(e){}
+  }
+  throw new Error('not found');
+}
+
+/* ---------- กล้องสด: อ่านเฉพาะภาพในกรอบ ---------- */
+const SC = { stream:null, track:null, mode:'qr', raf:0, busy:false, last:0, done:false, detector:null, frameNo:0 };
+const ONE_D = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','code_93','itf','codabar'];
+
+function loadJsQR(){
+  if (window.jsQR) return Promise.resolve();
+  return new Promise((ok, fail) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc);
+  });
+}
+
+async function makeDetector(){
+  SC.detector = null;
+  if (!('BarcodeDetector' in window)) return;
+  try {
+    const sup = await BarcodeDetector.getSupportedFormats();
+    const want = SC.mode === 'qr' ? ['qr_code'] : ONE_D;
+    const formats = want.filter(f => sup.includes(f));
+    if (formats.length) SC.detector = new BarcodeDetector({ formats });
+  } catch(e){}
+}
+
+/* ตัดเฉพาะส่วนของวิดีโอที่อยู่ใต้กรอบ (คิดเผื่อ object-fit: cover) */
+const cropCanvas = document.createElement('canvas');
+function grabFrame(){
+  const v = $('sc-video'), vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh) return null;
+  const vr = v.getBoundingClientRect(), fr = $('sc-frame').getBoundingClientRect();
+  const k = Math.max(vr.width / vw, vr.height / vh);
+  const offX = (vr.width - vw * k) / 2, offY = (vr.height - vh * k) / 2;
+  const sx = (fr.left - vr.left - offX) / k, sy = (fr.top - vr.top - offY) / k;
+  const sw = fr.width / k, sh = fr.height / k;
+  const out = Math.min(800, Math.round(sw));
+  cropCanvas.width = out; cropCanvas.height = Math.round(out * sh / sw);
+  const ctx = cropCanvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(v, sx, sy, sw, sh, 0, 0, cropCanvas.width, cropCanvas.height);
+  return cropCanvas;
+}
+
+async function detectOnce(){
+  const c = grabFrame(); if (!c) return null;
+  if (SC.detector) {
+    const r = await SC.detector.detect(c);
+    return r.length ? r[0].rawValue : null;
+  }
+  if (SC.mode === 'qr' && window.jsQR) {                      // iPhone: ไม่มี BarcodeDetector
+    const img = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+    const r = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+    return r ? r.data : null;
+  }
+  if (SC.mode === 'bar' && (SC.frameNo++ % 4 === 0)) {        // บาร์โค้ดบน iPhone: ช้ากว่า แต่ใช้ได้
+    try { return await libDetect(c); } catch(e){ return null; }
+  }
+  return null;
+}
+
+function loop(ts){
+  if (!SC.stream || SC.done) return;
+  SC.raf = requestAnimationFrame(loop);
+  if (SC.busy || ts - SC.last < 110) return;
+  SC.busy = true; SC.last = ts;
+  detectOnce().then(text => {
+    if (text && !SC.done) {
+      SC.done = true;
+      $('sc-frame').classList.add('hit');
+      setTimeout(() => { closeScanner(); applyScan(text); }, 220);
+    }
+  }).catch(() => {}).finally(() => { SC.busy = false; });
+}
+
+function placeHint(){
+  const fr = $('sc-frame').getBoundingClientRect();
+  $('sc-hint').style.top = (fr.bottom + 16) + 'px';
+}
+
+function setupExtras(){
+  let caps = {};
+  try { caps = SC.track.getCapabilities ? SC.track.getCapabilities() : {}; } catch(e){}
+  const t = $('sc-torch'); t.hidden = !caps.torch; t.setAttribute('aria-pressed', 'false');
+  const zb = $('sc-zoom'); zb.innerHTML = ''; zb.hidden = true;
+  if (caps.zoom && caps.zoom.max > 1) {
+    const levels = [1, 1.5, 2, 3].filter(z => z >= (caps.zoom.min || 1) && z <= caps.zoom.max);
+    levels.forEach((z, i) => {
+      const b = document.createElement('button'); b.type = 'button';
+      b.textContent = z + 'x'; b.setAttribute('aria-pressed', i === 0);
+      b.onclick = async () => {
+        try {
+          await SC.track.applyConstraints({ advanced: [{ zoom: z }] });
+          zb.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+        } catch(e){}
+      };
+      zb.appendChild(b);
+    });
+    zb.hidden = levels.length < 2;
+  }
+}
+
+async function openScanner(target){
+  S.scanTarget = target; SC.done = false; $('sc-photo').hidden = true;
+  const box = $('scanner'); box.hidden = false; box.dataset.mode = SC.mode;
+  $('sc-frame').classList.remove('hit');
+  requestAnimationFrame(placeHint);
+  $('sc-hint').textContent = 'กำลังเปิดกล้อง…';
+  try {
+    SC.stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+  } catch(err) {
+    const denied = String(err && err.name).indexOf('NotAllowed') > -1;
+    $('sc-hint').textContent = IN_GAS
+      ? 'ลิงก์ script.google.com เปิดกล้องสดไม่ได้ ให้เปิดระบบผ่านลิงก์ github.io'
+      : denied ? 'ยังไม่ได้อนุญาตกล้อง แตะไอคอนแม่กุญแจข้าง URL แล้วเปิด Camera'
+               : 'เปิดกล้องไม่ได้';
+    $('sc-photo').hidden = false;
+    return;
+  }
+  SC.track = SC.stream.getVideoTracks()[0];
+  const v = $('sc-video'); v.srcObject = SC.stream;
+  try { await v.play(); } catch(e){}
+  await makeDetector();
+  if (!SC.detector) { loadJsQR().catch(() => {}); loadScanner().catch(() => {}); }
+  setupExtras();
+  setHint();
+  SC.raf = requestAnimationFrame(loop);
+}
+
+function setHint(){
+  $('sc-hint').textContent = SC.mode === 'qr' ? 'วางรหัส QR ในกรอบ' : 'วางบาร์โค้ดในกรอบ แนวนอน';
+}
+
+function closeScanner(){
+  cancelAnimationFrame(SC.raf);
+  if (SC.stream) SC.stream.getTracks().forEach(t => t.stop());
+  SC.stream = null; SC.track = null;
+  $('sc-video').srcObject = null;
+  $('scanner').hidden = true;
+}
+
+document.querySelectorAll('[data-scan]').forEach(b => b.onclick = () => {
+  openScanner(b.dataset.scan);
+});
+document.querySelectorAll('.sc-mode button').forEach(b => b.onclick = async () => {
+  SC.mode = b.dataset.mode; $('scanner').dataset.mode = SC.mode;
+  document.querySelectorAll('.sc-mode button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  setTimeout(placeHint, 230); if (SC.stream) setHint();
+  await makeDetector();
+});
+$('sc-close').onclick = closeScanner;
+$('sc-torch').onclick = async () => {
+  const t = $('sc-torch'), on = t.getAttribute('aria-pressed') !== 'true';
+  try { await SC.track.applyConstraints({ advanced: [{ torch: on }] }); t.setAttribute('aria-pressed', on); }
+  catch(e){ toast('อุปกรณ์นี้เปิดไฟฉายไม่ได้', true); }
+};
+$('sc-photo').onclick = () => { $('qr-file').value = ''; $('qr-file').click(); closeScanner(); };
+window.addEventListener('resize', () => { if (!$('scanner').hidden) placeHint(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && SC.stream) closeScanner(); });
+loadScanner().catch(() => {});
+
+$('qr-file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  toast('กำลังอ่านโค้ด…');
+  try { applyScan(await decodePhoto(f)); }
+  catch(err) { toast('อ่านไม่ได้ ถ่ายให้โค้ดเต็มกรอบ ชัด ไม่เอียง ไม่สะท้อนแสง', true); }
+};
+
+/* ---------- นับสต็อก ---------- */
+$('cnt-img').onchange = e => {
+  const f = e.target.files[0]; S.img = null;
+  if (!f) return $('cnt-preview').classList.add('hidden');
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {
+    const max = 1280, s = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = img.width*s; c.height = img.height*s;
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    S.img = c.toDataURL('image/jpeg', .72);
+    $('cnt-preview').src = S.img; $('cnt-preview').classList.remove('hidden');
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+};
+
+async function submitWith(form, fn, payload, onDone){
+  const btn = form.querySelector('button[type=submit]'), label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+  try { const r = await api(fn, S.token, payload); onDone(r); }
+  catch(err){ toast(err.message, true); }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+
+$('tab-count').onsubmit = e => {
+  e.preventDefault();
+  const it = resolveItem('cnt-code'); if (!it) return toast('เลือกสินค้าจากรายการก่อน', true);
+  submitWith(e.target, 'saveCount', {
+    code: it.code, desc: it.desc, loose: n('cnt-loose'), total: n('cnt-total'), imageData: S.img
+  }, r => {
+    toast('บันทึกยอดนับแล้ว · ' + r.id);
+    ['cnt-code','cnt-total','cnt-img'].forEach(id => $(id).value = '');
+    $('cnt-loose').value = 0; $('cnt-code-desc').textContent = '';
+    $('cnt-preview').classList.add('hidden'); S.img = null; $('cnt-code').focus();
+  });
+};
+
+/* ---------- สรุปกะ ---------- */
+function calcShift(){
+  const exp = n('sh-open') + n('sh-restock') - n('sh-sales');
+  $('sh-exp').textContent = exp;
+  const has = $('sh-actual').value !== '';
+  const diff = has ? n('sh-actual') - exp : null;
+  $('sh-diff').textContent = has ? (diff > 0 ? '+' + diff : diff) : '–';
+  $('sh-diffbox').className = !has || diff === 0 ? '' : diff < 0 ? 'neg' : 'pos';
+}
+['sh-open','sh-restock','sh-sales','sh-actual'].forEach(id => $(id).addEventListener('input', calcShift));
+
+$('sh-fill').onclick = async () => {
+  const it = resolveItem('sh-code'); if (!it) return toast('เลือกสินค้าก่อน', true);
+  try {
+    const r = await api('getLastActual', S.token, it.code);
+    if (!r) return toast('ยังไม่มีสรุปกะก่อนหน้าของสินค้านี้', true);
+    $('sh-open').value = r.qty; calcShift();
+    toast('ยกยอดจาก ' + r.date + ' ' + r.shift + ' = ' + r.qty);
+  } catch(e){ toast(e.message, true); }
+};
+
+$('tab-shift').onsubmit = e => {
+  e.preventDefault();
+  const it = resolveItem('sh-code'); if (!it) return toast('เลือกสินค้าจากรายการก่อน', true);
+  submitWith(e.target, 'saveShift', {
+    date: isoToThai($('sh-date').value), shift: $('sh-shift').value, code: it.code, desc: it.desc,
+    opening: n('sh-open'), restock: n('sh-restock'), sales: n('sh-sales'), actual: n('sh-actual'),
+    remark: $('sh-remark').value.trim()
+  }, r => {
+    toast(r.diff === 0 ? 'บันทึกสรุปกะแล้ว ยอดตรง' : 'บันทึกสรุปกะแล้ว ส่วนต่าง ' + r.diff, r.diff !== 0);
+    ['sh-code','sh-actual','sh-remark'].forEach(id => $(id).value = '');
+    ['sh-open','sh-restock','sh-sales'].forEach(id => $(id).value = 0);
+    $('sh-code-desc').textContent = ''; calcShift();
+  });
+};
+
+/* ---------- ปรับสต็อก ---------- */
+$('tab-adj').onsubmit = e => {
+  e.preventDefault();
+  const it = resolveItem('adj-code'); if (!it) return toast('เลือกสินค้าจากรายการก่อน', true);
+  submitWith(e.target, 'saveAdjustment', {
+    type: $('adj-type').value, shift: $('adj-shift').value, code: it.code, desc: it.desc,
+    qty: n('adj-qty'), approvedBy: $('adj-appr').value.trim(), remark: $('adj-remark').value.trim()
+  }, r => {
+    toast('บันทึกการปรับสต็อกแล้ว (' + (r.qty > 0 ? '+' : '') + r.qty + ')');
+    ['adj-code','adj-qty','adj-remark'].forEach(id => $(id).value = '');
+    $('adj-code-desc').textContent = '';
+  });
+};
+
+/* ---------- ประวัติ ---------- */
+function esc(s){ return String(s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;'); }
+$('hist-load').onclick = async () => {
+  const out = $('hist-out'); out.innerHTML = '<div class="empty">กำลังโหลด…</div>';
+  try {
+    const r = await api('getRecent', S.token, $('hist-which').value);
+    if (!r.rows.length) { out.innerHTML = '<div class="empty">ยังไม่มีรายการในชีตนี้</div>'; return; }
+    out.innerHTML = '<table><thead><tr>' + r.headers.map(h => '<th>' + esc(h) + '</th>').join('') +
+      '</tr></thead><tbody>' + r.rows.map(row => '<tr>' + row.map(c =>
+        String(c).indexOf('https://') === 0 ? '<td><a href="' + esc(c) + '" target="_blank" rel="noopener">ดูรูป</a></td>' : '<td>' + esc(c) + '</td>'
+      ).join('') + '</tr>').join('') + '</tbody></table>';
+  } catch(e){ out.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+};
+
+/* ---------- เปิดหน้า: ถ้ายังมี session อยู่ เข้าแอปเลย ---------- */
+(async () => {
+  const t = store.get(); if (!t) return;
+  try { S.profile = await api('whoami', t); S.token = t; await enterApp(); }
+  catch(e){ store.clear(); $('lgErr').textContent = ''; }
+})();
+</script>
+</body>
+</html>
