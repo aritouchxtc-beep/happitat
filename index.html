@@ -338,7 +338,7 @@ const store = {
 /* ---------- server call ----------
    เปิดผ่าน Apps Script → ใช้ google.script.run
    เปิดจากเว็บภายนอก (GitHub Pages ฯลฯ) → ยิงไปที่ API_URL (ลิงก์ /exec) */
-const API_URL = '';   // ปล่อยว่างได้ ระบบจะให้วางลิงก์ /exec ที่หน้า login ครั้งแรก แล้วจำไว้ในเครื่อง
+const API_URL = 'https://script.google.com/macros/s/AKfycbxlh4XxCk-NbjKXsUxlBgJ9ugDTfoPubCsK5Y5-EAyK_NoCw-tK_gTlG9o1LJZg5QdqVA/exec';   // ปล่อยว่างได้ ระบบจะให้วางลิงก์ /exec ที่หน้า login ครั้งแรก แล้วจำไว้ในเครื่อง
 function apiUrl(){
   if (API_URL) return API_URL;
   try { return localStorage.getItem('happitat_api') || ''; } catch(e){ return ''; }
