@@ -358,7 +358,7 @@
     <!-- นับสต็อก -->
     <form class="panel" id="tab-count" action="javascript:void(0)">
       <h2>นับสต็อกหน้าบูธ</h2>
-      <p class="sub">บันทึกลงชีต inventory_Electric</p>
+      <p class="sub">บันทึกลงชีต <span id="cnt-sheet">inventory_Electric</span></p>
       <div class="field">
         <label for="cnt-code" class="req">สินค้า</label>
         <div class="picker">
@@ -833,7 +833,8 @@ function setBooth(b, silent){
   try { localStorage.setItem(boothKey(), b.id); } catch(e){}
   $('boothName').textContent = b.name;
   $('boothZone').textContent = b.zone ? '· ' + b.zone : '';
-  $('boothChange').hidden = S.booths.length < 2;
+  $('boothChange').hidden = false;
+  $('cnt-sheet').textContent = b.countSheet || 'inventory_Electric';
   $('rp-booth').textContent = b.name; $('rp-zone').textContent = b.zone || '–';
   $('adj-to').innerHTML = '<option value="">เลือกบูธปลายทาง</option>' +
     S.allBooths.filter(x => x.id !== b.id).map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>').join('');
@@ -852,6 +853,9 @@ function showBoothPicker(cancelable){
     setBooth(S.booths.find(b => b.id === el.dataset.id));
     $('boothpick').classList.add('hidden'); $('app').classList.remove('hidden');
   });
+  if (S.booths.length < 2) $('boothList').insertAdjacentHTML('beforeend',
+    '<p class="hint" style="text-align:center;margin-top:6px">ตอนนี้คุณมีสิทธิ์บูธเดียว ถ้าต้องการบูธเพิ่ม ให้ผู้ดูแลเพิ่มแถวในชีต booths ' +
+    'หรือใส่รหัสพนักงานของคุณในคอลัมน์ Staff IDs</p>');
   $('boothCancel').hidden = !cancelable || !S.booth;
   $('app').classList.add('hidden'); $('boothpick').classList.remove('hidden');
 }
