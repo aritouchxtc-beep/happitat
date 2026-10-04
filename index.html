@@ -146,7 +146,7 @@
     .row{gap:4px 14px}
     .rp-meta{margin-top:8px}
     .rp-meta div{padding:5px 10px}
-    .rp-sec{margin:12px 0 6px;font-size:12px}
+    .rp-sec{margin:9px 0 4px;font-size:12px}
     .rp-line{padding:4px 0}
     .rp-line input{width:110px}
     th,td{padding:5px 8px}
@@ -156,6 +156,10 @@
     #rp-body .rp-meta{font-size:11px}
     input::-webkit-calendar-picker-indicator{display:none}
     .sign .line{height:26px}
+    .rp-boothbox{padding:4px 10px}
+    .issue{padding:4px 0}
+    #tab-report .row{margin-top:8px!important}
+    #rp-printed{margin-top:6px!important}
   }
   .booth-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--paper);
     border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:var(--radius-s);padding:10px 14px;margin-bottom:14px}
@@ -354,7 +358,7 @@
     <!-- นับสต็อก -->
     <form class="panel" id="tab-count" action="javascript:void(0)">
       <h2>นับสต็อกหน้าบูธ</h2>
-      <p class="sub">บันทึกลงชีต inventory_EL</p>
+      <p class="sub">บันทึกลงชีต inventory_Electric</p>
       <div class="field">
         <label for="cnt-code" class="req">สินค้า</label>
         <div class="picker">
@@ -375,8 +379,9 @@
         <div class="field"><label for="cnt-box" class="req">จำนวนกล่อง (Box Qty)</label>
           <input id="cnt-box" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
           <div class="field-err" id="cnt-box-err"></div></div>
-        <div class="field"><label for="cnt-loose" class="req">ชิ้นแยก (Loose Qty)</label>
-          <input id="cnt-loose" type="number" min="0" step="1" inputmode="numeric" value="0">
+        <div class="field"><label for="cnt-loose">ชิ้นแยก (Loose Qty)</label>
+          <input id="cnt-loose" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+          <small class="hint">ไม่บังคับ ถ้าไม่มีชิ้นแยก เว้นว่างได้</small>
           <div class="field-err" id="cnt-loose-err"></div></div>
         <div class="field"><label>จำนวนรวม (Total Qty)</label>
           <div class="total-box"><b id="cnt-total">0</b></div>
@@ -576,7 +581,7 @@
       <p class="sub">30 รายการล่าสุด เรียงจากใหม่ไปเก่า</p>
       <div class="row">
         <select id="hist-which">
-          <option value="inv">นับสต็อก (inventory_EL)</option>
+          <option value="inv">นับสต็อก (inventory_Electric)</option>
           <option value="shift">สรุปกะ (shift_summary)</option>
           <option value="adj">ปรับสต็อก (stock_adjustments)</option>
           <option value="sale" id="histSaleOpt">ขายออก (inventory_cashier)</option>
@@ -1311,7 +1316,7 @@ $('tab-count').onsubmit = e => {
     ['cnt-code', it ? '' : 'เลือกสินค้า'],
     ['cnt-perbox', intErr('cnt-perbox', 'จำนวนต่อกล่อง', 1)],
     ['cnt-box', intErr('cnt-box', 'จำนวนกล่อง', 0)],
-    ['cnt-loose', intErr('cnt-loose', 'ชิ้นแยก', 0)],
+    ['cnt-loose', intErr('cnt-loose', 'ชิ้นแยก', 0, true)],
   ])) return;
   const perBox = n('cnt-perbox');
   if (!needBooth()) return;
@@ -1321,7 +1326,7 @@ $('tab-count').onsubmit = e => {
     it.perBox = r.perBox;                                  // จำค่าไว้ในเครื่อง ครั้งหน้าจะล็อกให้
     toast('บันทึกยอดนับแล้ว · ' + S.booth.name + ' · รวม ' + r.total + ' ชิ้น');
     ['cnt-code','cnt-box','cnt-img'].forEach(id => $(id).value = '');
-    $('cnt-loose').value = 0; $('cnt-code-desc').textContent = ''; $('cnt-code-desc').className = 'item-desc';
+    $('cnt-loose').value = ''; $('cnt-code-desc').textContent = ''; $('cnt-code-desc').className = 'item-desc';
     pbItem = undefined; syncPerBox(null);
     $('cnt-preview').classList.add('hidden'); S.img = null; $('cnt-code').focus();
   });
