@@ -41,7 +41,7 @@
   .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
   /* ---------- login ---------- */
-  #login,#pwchange,#boothpick{min-height:100%;display:grid;place-items:center;padding:24px 16px;
+  #login,#pwchange,#boothpick,#shiftpick{min-height:100%;display:grid;place-items:center;padding:24px 16px;
     background:linear-gradient(var(--shelf) 0 38%, var(--mist) 38% 100%)}
   .tag{width:100%;max-width:400px;background:var(--paper);border-radius:var(--radius-l);
     position:relative;padding:44px 28px 28px;box-shadow:0 18px 40px -22px rgba(18,59,44,.55)}
@@ -128,7 +128,7 @@
   @media print{
     @page{size:A4;margin:12mm}
     body{background:#fff;font-size:11px}
-    header.bar,nav.tabs,#toast,#fatal,#login,#pwchange,#boothpick,.booth-strip,.no-print{display:none!important}
+    header.bar,nav.tabs,#toast,#fatal,#login,#pwchange,#boothpick,#shiftpick,.booth-strip,.no-print{display:none!important}
     main{max-width:none;padding:0}
     main>*:not(#tab-report){display:none!important}
     #tab-report{display:block!important;border:0;padding:0}
@@ -176,6 +176,9 @@
   .booth-opt .tick{color:var(--shelf);font-weight:700}
   .rp-boothbox{background:var(--mist);border-radius:var(--radius-s);padding:10px 12px}
   .rp-boothbox small{display:block;color:var(--muted);font-size:.8rem}
+  .pull-note{margin-top:6px;font-size:.85rem;border-radius:var(--radius-s);padding:8px 10px;background:var(--mist);line-height:1.45}
+  .pull-note.warn{background:#FFF6E2;color:#6b4e00}
+  .pull-note button{margin:4px 6px 0 0;border:1.5px solid var(--shelf);background:#fff;color:var(--shelf);border-radius:999px;padding:3px 10px;font-weight:600;cursor:pointer;font-size:.82rem}
   .total-box{background:var(--mist);border-radius:var(--radius-s);padding:8px 14px;border:1.5px dashed var(--line)}
   .total-box b{font-size:1.6rem;color:var(--shelf)}
   input.invalid,select.invalid{border-color:var(--red);box-shadow:0 0 0 3px rgba(184,58,38,.15)}
@@ -332,6 +335,16 @@
   </div>
 </section>
 
+<!-- ================= SHIFT PICKER ================= -->
+<section id="shiftpick" class="hidden">
+  <div class="tag">
+    <h2 class="pw-title">วันนี้คุณทำกะไหน</h2>
+    <p class="pw-sub">ช่วงเวลานี้มี 2 กะทำงานซ้อนกัน เลือกครั้งเดียว ระบบจะจำไว้ทั้งวัน</p>
+    <hr class="perf">
+    <div class="booth-list" id="shiftList"></div>
+  </div>
+</section>
+
 <!-- ================= APP ================= -->
 <section id="app" class="hidden">
   <header class="bar">
@@ -352,7 +365,8 @@
 
   <main>
     <div class="booth-strip" id="boothStrip">
-      <div><small>บูธปัจจุบัน</small><b id="boothName">–</b> <span id="boothZone" style="color:var(--muted);font-size:.88rem"></span></div>
+      <div><small>บูธปัจจุบัน</small><b id="boothName">–</b> <span id="boothZone" style="color:var(--muted);font-size:.88rem"></span>
+        <small style="margin-top:2px">กะของฉัน: <button type="button" class="linkbtn" id="shiftName" style="font-size:.85rem">เลือกกะ</button></small></div>
       <button type="button" class="btn ghost" id="boothChange">เปลี่ยนบูธ</button>
     </div>
     <!-- นับสต็อก -->
@@ -418,7 +432,8 @@
           <button type="button" class="linkbtn" id="sh-fill">ดึงยอดนับจริงกะก่อน</button></div>
         <div class="field"><label for="sh-restock" class="req">รับเติมระหว่างกะ</label><input id="sh-restock" type="number" min="0" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-restock-err"></div></div>
         <div class="field"><label for="sh-sales" class="req">ขายออก</label><input id="sh-sales" type="number" min="0" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-sales-err"></div>
-          <button type="button" class="linkbtn" id="sh-pullsales">ดึงยอดขายจากแคชเชียร์</button></div>
+          <button type="button" class="linkbtn" id="sh-pullsales">ดึงยอดขายจากแคชเชียร์</button>
+          <div class="pull-note" id="sh-sales-note" hidden></div></div>
         <div class="field"><label for="sh-actual" class="req">นับได้จริง</label><input id="sh-actual" type="number" min="0" step="1" inputmode="numeric"><div class="field-err" id="sh-actual-err"></div></div>
       </div>
       <div class="calc">
@@ -623,7 +638,12 @@
 <div id="toast" class="hidden" role="status"></div>
 
 <script>
-const SHIFTS = ['กะเช้า','กะบ่าย','กะเย็น'];
+// กะการทำงาน (แก้ชื่อ/เวลาได้ที่นี่)
+const SHIFT_DEFS = [
+  { name: 'กะเช้า', start: 9,  end: 18, label: '09:00–18:00 น.' },
+  { name: 'กะบ่าย', start: 13, end: 22, label: '13:00–22:00 น.' },
+];
+const SHIFTS = SHIFT_DEFS.map(x => x.name);
 const S = { token:null, profile:null, items:{}, barcodes:{}, scanTarget:null, img:null };
 const $ = id => document.getElementById(id);
 
@@ -779,7 +799,7 @@ $('pwCancel').onclick = async () => {
 
 function showLogin(msg){
   S.token = null; S.profile = null; store.clear();
-  $('app').classList.add('hidden'); $('pwchange').classList.add('hidden'); $('boothpick').classList.add('hidden'); $('login').classList.remove('hidden');
+  $('app').classList.add('hidden'); $('pwchange').classList.add('hidden'); $('boothpick').classList.add('hidden'); $('shiftpick').classList.add('hidden'); $('login').classList.remove('hidden');
   S.booth = null;
   $('lgErr').textContent = msg || '';
 }
@@ -821,8 +841,8 @@ async function loadBooths(){
     $('histAllOpt').hidden = !r.admin;
     let saved = ''; try { saved = localStorage.getItem(boothKey()) || ''; } catch(e){}
     const keep = S.booths.find(b => b.id === saved);
-    if (keep) setBooth(keep, true);
-    else if (S.booths.length === 1) setBooth(S.booths[0], true);
+    if (keep) { setBooth(keep, true); askShiftIfNeeded(); }
+    else if (S.booths.length === 1) { setBooth(S.booths[0], true); askShiftIfNeeded(); }
     else if (!S.booths.length) { $('boothName').textContent = 'ยังไม่มีบูธที่คุณเข้าได้ ติดต่อผู้ดูแล'; }
     else showBoothPicker(false);
   } catch(e){ toast(e.message, true); }
@@ -852,6 +872,7 @@ function showBoothPicker(cancelable){
   $('boothList').querySelectorAll('.booth-opt').forEach(el => el.onclick = () => {
     setBooth(S.booths.find(b => b.id === el.dataset.id));
     $('boothpick').classList.add('hidden'); $('app').classList.remove('hidden');
+    askShiftIfNeeded();
   });
   if (S.booths.length < 2) $('boothList').insertAdjacentHTML('beforeend',
     '<p class="hint" style="text-align:center;margin-top:6px">ตอนนี้คุณมีสิทธิ์บูธเดียว ถ้าต้องการบูธเพิ่ม ให้ผู้ดูแลเพิ่มแถวในชีต booths ' +
@@ -860,6 +881,7 @@ function showBoothPicker(cancelable){
   $('app').classList.add('hidden'); $('boothpick').classList.remove('hidden');
 }
 $('boothChange').onclick = () => showBoothPicker(true);
+$('shiftName').onclick = () => showShiftPicker();
 $('boothCancel').onclick = () => { $('boothpick').classList.add('hidden'); $('app').classList.remove('hidden'); };
 function needBooth(){
   if (S.booth) return true;
@@ -881,7 +903,38 @@ async function showLastCount(it){
 /* ---------- helpers ---------- */
 function todayISO(){ const d = new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function isoToThai(v){ if(!v) return ''; const [y,m,d] = v.split('-'); return d+'/'+m+'/'+y; }
-function guessShift(){ const h = new Date().getHours(); return h < 12 ? SHIFTS[0] : h < 17 ? SHIFTS[1] : SHIFTS[2]; }
+/* กะของฉันวันนี้: จำตามที่เลือกไว้ (ต่อผู้ใช้ ต่อวัน) ถ้ายังไม่เลือก เดาจากเวลา ช่วงที่กะทับกัน (13:00–17:59) ต้องให้ผู้ใช้เลือก */
+function shiftKey(){ return 'happitat_shift_' + (S.profile ? S.profile.user : '') + '_' + todayISO(); }
+function myShift(){
+  try { const v = localStorage.getItem(shiftKey()); if (SHIFTS.indexOf(v) > -1) return v; } catch(e){}
+  const h = new Date().getHours();
+  const hit = SHIFT_DEFS.filter(x => h >= x.start && h < x.end);
+  if (hit.length === 1) return hit[0].name;
+  if (!hit.length) return h < SHIFT_DEFS[0].start ? SHIFT_DEFS[0].name : SHIFT_DEFS[SHIFT_DEFS.length - 1].name;
+  return null;                                            // ช่วงกะทับกัน
+}
+function guessShift(){ return myShift() || SHIFTS[0]; }
+function setMyShift(name, persist){
+  if (persist) { try { localStorage.setItem(shiftKey(), name); } catch(e){} }
+  document.querySelectorAll('.shift-select').forEach(sel => sel.value = name);
+  const d = SHIFT_DEFS.find(x => x.name === name);
+  $('shiftName').textContent = name + (d ? ' · ' + d.label : '');
+}
+function showShiftPicker(){
+  $('shiftList').innerHTML = SHIFT_DEFS.map(x =>
+    '<button type="button" class="booth-opt" data-shift="' + esc(x.name) + '"><span><b>' + esc(x.name) + '</b><small>' + esc(x.label) +
+    '</small></span><span class="tick">เลือก</span></button>').join('');
+  $('shiftList').querySelectorAll('.booth-opt').forEach(el => el.onclick = () => {
+    setMyShift(el.dataset.shift, true);
+    $('shiftpick').classList.add('hidden'); $('app').classList.remove('hidden');
+    refreshToday(); toast('วันนี้ทำ ' + el.dataset.shift);
+  });
+  $('app').classList.add('hidden'); $('boothpick').classList.add('hidden'); $('shiftpick').classList.remove('hidden');
+}
+function askShiftIfNeeded(){
+  const s = myShift();
+  if (s) setMyShift(s); else showShiftPicker();
+}
 function setupShifts(){
   document.querySelectorAll('.shift-select').forEach(sel => {
     sel.innerHTML = SHIFTS.map(s => '<option>' + s + '</option>').join('');
@@ -1354,6 +1407,7 @@ function calcSale(){
   $('sale-amount').textContent = amt.toLocaleString('th-TH', { maximumFractionDigits: 2 });
 }
 ['sale-qty','sale-price'].forEach(id => $(id).addEventListener('input', calcSale));
+$('sale-shift').addEventListener('change', () => setMyShift($('sale-shift').value, true));
 $('sale-code').addEventListener('change', () => {
   const it = S.items[$('sale-code').value.trim()];
   if (it && it.price) { $('sale-price').value = String(it.price).split(',').join(''); calcSale(); }
@@ -1418,15 +1472,41 @@ $('tab-sale').onsubmit = e => {
   });
 };
 
+function salesNote(html, warn){
+  const n = $('sh-sales-note'); n.innerHTML = html; n.className = 'pull-note' + (warn ? ' warn' : ''); n.hidden = !html;
+}
 $('sh-pullsales').onclick = async () => {
   const it = resolveItem('sh-code'); if (!it) return toast('เลือกสินค้าก่อน', true);
+  if (!needBooth()) return;
+  const date = isoToThai($('sh-date').value), shift = $('sh-shift').value;
+  const btn = $('sh-pullsales'); btn.textContent = 'กำลังดึงยอดขาย…';
   try {
-    if (!needBooth()) return;
-    const r = await api('getSalesTotal', S.token, it.code, isoToThai($('sh-date').value), $('sh-shift').value, false, S.booth.id);
+    const r = await api('getSalesTotal', S.token, it.code, date, shift, false, S.booth.id);
     $('sh-sales').value = r.qty; calcShift();
-    toast('ยอดขาย ' + $('sh-shift').value + ' จากแคชเชียร์ = ' + r.qty + ' ชิ้น');
-  } catch(e){ toast(e.message, true); }
+    if (r.qty > 0) { salesNote('ดึงแล้ว: ' + esc(shift) + ' วันที่ ' + date + ' ขาย <b>' + r.qty + ' ชิ้น</b>'); return; }
+    // ไม่เจอในกะนี้ บอกว่ายอดขายไปอยู่ที่ไหน
+    const others = Object.keys(r.byShift || {}).filter(k => k !== shift && r.byShift[k] > 0);
+    let h = '<b>' + esc(shift) + '</b> วันที่ ' + date + ' ยังไม่มียอดขายสินค้านี้ในบูธ ' + esc(S.booth.name);
+    if (others.length) {
+      h += '<br>แต่พบยอดขายวันนี้ในกะอื่น กดเพื่อใช้กะนั้น:<br>' +
+        others.map(k => '<button type="button" data-shift="' + esc(k) + '">' + esc(k) + ' · ' + r.byShift[k] + ' ชิ้น</button>').join('');
+    }
+    if ((r.otherBooths || []).length) {
+      h += '<br>พบยอดขายวันนี้ในบูธอื่น: ' + r.otherBooths.map(b => esc(b.name) + ' ' + b.qty + ' ชิ้น').join(', ') +
+        ' (ตรวจว่าตอนขายเลือกบูธถูกหรือไม่)';
+    }
+    if (!others.length && !(r.otherBooths || []).length) h += '<br>ตรวจวันที่ หรือดูรายการในแท็บประวัติ → ขายออก';
+    salesNote(h, true);
+    $('sh-sales-note').querySelectorAll('button[data-shift]').forEach(b => b.onclick = () => {
+      const opt = [...$('sh-shift').options].find(o => o.value === b.dataset.shift);
+      if (!opt) $('sh-shift').insertAdjacentHTML('beforeend', '<option>' + esc(b.dataset.shift) + '</option>');
+      $('sh-shift').value = b.dataset.shift;
+      $('sh-pullsales').click();
+    });
+  } catch(e){ salesNote(esc(e.message), true); toast(e.message, true); }
+  finally { btn.textContent = 'ดึงยอดขายจากแคชเชียร์'; }
 };
+['sh-code','sh-date','sh-shift'].forEach(id => $(id).addEventListener('change', () => salesNote('')));
 
 $('sh-fill').onclick = async () => {
   const it = resolveItem('sh-code'); if (!it) return toast('เลือกสินค้าก่อน', true);
