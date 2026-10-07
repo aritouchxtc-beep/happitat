@@ -179,6 +179,9 @@
   .pull-note{margin-top:6px;font-size:.85rem;border-radius:var(--radius-s);padding:8px 10px;background:var(--mist);line-height:1.45}
   .pull-note.warn{background:#FFF6E2;color:#6b4e00}
   .pull-note button{margin:4px 6px 0 0;border:1.5px solid var(--shelf);background:#fff;color:var(--shelf);border-radius:999px;padding:3px 10px;font-weight:600;cursor:pointer;font-size:.82rem}
+  .saved-note{margin-top:10px;padding:10px 12px;border-radius:var(--radius-s);background:#EAF4EE;border-left:4px solid var(--shelf);font-size:.9rem}
+  .saved-note small{color:var(--muted)}
+  .saved-note.bad{background:#FBEDEA;border-left-color:var(--red);color:var(--red)}
   .total-box{background:var(--mist);border-radius:var(--radius-s);padding:8px 14px;border:1.5px dashed var(--line)}
   .total-box b{font-size:1.6rem;color:var(--shelf)}
   input.invalid,select.invalid{border-color:var(--red);box-shadow:0 0 0 3px rgba(184,58,38,.15)}
@@ -1327,8 +1330,22 @@ $('cnt-img').onchange = async e => {
 async function submitWith(form, fn, payload, onDone){
   const btn = form.querySelector('button[type=submit]'), label = btn.textContent;
   btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
-  try { const r = await api(fn, S.token, payload); onDone(r); }
-  catch(err){ toast(err.message, true); }
+  let note = form.querySelector('.saved-note');
+  if (!note) { note = document.createElement('div'); note.className = 'saved-note'; btn.insertAdjacentElement('afterend', note); }
+  note.hidden = true;
+  try {
+    const r = await api(fn, S.token, payload);
+    onDone(r);
+    // ยืนยันค้างไว้ใต้ปุ่ม: บันทึกลงชีตไหน แถวที่เท่าไร
+    note.className = 'saved-note';
+    note.innerHTML = '✓ บันทึกแล้ว' + (r && r.sheet ? ' ลงชีต <b>' + esc(r.sheet) + '</b> แถวที่ <b>' + r.row + '</b>' : '') +
+      (r && r.id ? '<br><small>เลขที่ ' + esc(r.id) + ' · ' + new Date().toLocaleTimeString('th-TH') + '</small>' : '');
+    note.hidden = false;
+  }
+  catch(err){
+    toast(err.message, true);
+    note.className = 'saved-note bad'; note.textContent = '✕ ยังไม่ได้บันทึก: ' + err.message; note.hidden = false;
+  }
   finally { btn.disabled = false; btn.textContent = label; }
 }
 
