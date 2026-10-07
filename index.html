@@ -690,7 +690,11 @@ function api(fn, ...args){
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // แบบนี้ไม่ติด CORS
     body: JSON.stringify({ fn, args })
   })
-  .catch(() => { throw new Error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ต'); })
+  .catch(() => {
+    throw new Error(navigator.onLine === false
+      ? 'ไม่มีอินเทอร์เน็ต ตรวจสอบสัญญาณแล้วลองใหม่'
+      : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ระบบหลังบ้านอาจยังไม่ได้ Deploy หรือขอสิทธิ์ใหม่ แจ้งผู้ดูแลให้เปิดลิงก์ /exec?ping=1 เพื่อตรวจสอบ');
+  })
   .then(r => r.json().catch(() => {
     $('apiBox').hidden = false;
     throw new Error('ลิงก์เชื่อมต่อไม่ถูกต้อง หรือยังไม่ได้ Deploy เวอร์ชันใหม่');
