@@ -130,8 +130,13 @@
     body{background:#fff;font-size:11px}
     header.bar,nav.tabs,#toast,#fatal,#login,#pwchange,#boothpick,#shiftpick,.booth-strip,.no-print{display:none!important}
     main{max-width:none;padding:0}
-    main>*:not(#tab-report){display:none!important}
-    #tab-report{display:block!important;border:0;padding:0}
+    body:not(.printing-stk) main>*:not(#tab-report){display:none!important}
+    body:not(.printing-stk) #tab-report{display:block!important;border:0;padding:0}
+    body.printing-stk main>*:not(#tab-stk){display:none!important}
+    body.printing-stk #tab-stk{display:block!important;border:0;padding:0}
+    #stk-table input{border:0!important;padding:0!important}
+    input::placeholder,textarea::placeholder{color:transparent!important}
+    #stk-table td,#stk-table th{white-space:normal}
     .print-only{display:block}
     .rp-head{background:#13202a;color:#fff;padding:14px 16px;border-radius:6px}
     .rp-head h2,.rp-head .sub,.rp-doc small{color:#fff}
@@ -182,6 +187,24 @@
   .saved-note{margin-top:10px;padding:10px 12px;border-radius:var(--radius-s);background:#EAF4EE;border-left:4px solid var(--shelf);font-size:.9rem}
   .saved-note small{color:var(--muted)}
   .saved-note.bad{background:#FBEDEA;border-left-color:var(--red);color:var(--red)}
+  #stk-table td.n,#stk-table th.n{text-align:right}
+  #stk-table tr.bad td{background:#FBEDEA}
+  #stk-table td input{padding:6px 8px;font-size:.85rem;min-width:120px}
+  #stk-table th{background:var(--shelf)}
+  .st{display:inline-block;font-size:.78rem;padding:2px 8px;border-radius:999px;white-space:nowrap;font-weight:600}
+  .st.ok{background:#EAF4EE;color:var(--shelf)} .st.minor,.st.first,.st.notfound{background:#FFF6E2;color:#6b4e00}
+  .st.recount{background:#FBEDEA;color:var(--red)} .st.recounted{background:#EAF0FB;color:#1d4f91}
+  .stk-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .stk-sum div{background:var(--mist);border-radius:var(--radius-s);padding:8px 10px}
+  .stk-sum small{display:block;color:var(--muted);font-size:.78rem}
+  .stk-sum b{font-size:1.3rem}
+  .stk-badge{display:inline-block;padding:3px 10px;border-radius:999px;background:#EAF4EE;color:var(--shelf);font-weight:600;font-size:.82rem}
+  .stk-rules{font-size:.82rem;color:var(--muted);margin:8px 0 0;padding-left:18px}
+  .sign3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .sign3>div{border:1px solid var(--line);border-radius:var(--radius-s);padding:10px;text-align:center}
+  .sign3 small{display:block;color:var(--muted);font-size:.78rem;margin-bottom:6px}
+  .sign3 .line{border-bottom:1px solid #777;height:30px;margin:4px 8px}
+  @media (max-width:520px){.stk-sum{grid-template-columns:repeat(2,1fr)}.sign3{grid-template-columns:1fr}}
   .total-box{background:var(--mist);border-radius:var(--radius-s);padding:8px 14px;border:1.5px dashed var(--line)}
   .total-box b{font-size:1.6rem;color:var(--shelf)}
   input.invalid,select.invalid{border-color:var(--red);box-shadow:0 0 0 3px rgba(184,58,38,.15)}
@@ -362,6 +385,7 @@
     <button role="tab" data-tab="sale" aria-selected="false" id="tabSaleBtn">ขายออก</button>
     <button role="tab" data-tab="shift" aria-selected="false">สรุปกะ</button>
     <button role="tab" data-tab="report" aria-selected="false">ใบสรุปกะ</button>
+    <button role="tab" data-tab="stk" aria-selected="false">ใบตรวจนับ</button>
     <button role="tab" data-tab="adj" aria-selected="false">ปรับสต็อก</button>
     <button role="tab" data-tab="hist" aria-selected="false">ประวัติ</button>
   </nav>
@@ -515,6 +539,54 @@
       </div>
     </form>
 
+    <!-- ใบตรวจนับ -->
+    <form class="panel hidden" id="tab-stk" action="javascript:void(0)">
+      <div class="rp-head">
+        <div><h2>ใบตรวจนับสต็อกสินค้า</h2><p class="sub" style="margin:0">Inventory count sheet</p></div>
+        <div class="rp-doc"><small>เลขที่เอกสาร</small><b id="stk-doc">–</b></div>
+      </div>
+      <p class="sub no-print" style="margin-top:10px">นับสินค้าในแท็บนับสต็อกก่อน แล้วโหลดมาตรวจที่นี่ บันทึกลงชีต stock_count</p>
+      <div class="row">
+        <div class="field"><label for="stk-date" class="req">วันที่ตรวจนับ</label><input id="stk-date" type="date"><div class="field-err" id="stk-date-err"></div></div>
+        <div class="field"><label for="stk-round">รอบการนับ</label>
+          <select id="stk-round"><option>ประจำวัน</option><option>ประจำสัปดาห์</option><option>ประจำเดือน</option><option>ประจำปี</option></select></div>
+        <div class="field"><div class="rp-boothbox"><small>สถานที่ (บูธ)</small><b id="stk-booth">–</b></div></div>
+        <div class="field"><label for="stk-shelf">แถว / ชั้นวาง</label><input id="stk-shelf" placeholder="ชั้น A1–A3"></div>
+      </div>
+      <button type="button" class="btn ghost no-print" id="stk-load" style="width:100%">โหลดยอดนับ</button>
+
+      <div id="stk-body" class="hidden">
+        <div class="rp-meta">
+          <div><small>หมวดสินค้า (ชีตนับ)</small><span id="stk-sheet">–</span></div>
+          <div><small>เวลาเริ่ม – เสร็จ</small><span id="stk-time">–</span></div>
+        </div>
+        <div class="table-wrap"><table id="stk-table"></table></div>
+        <div class="stk-sum">
+          <div><small>รายการที่นับ</small><b id="stk-n">0</b></div>
+          <div><small>ตรงยอด</small><b id="stk-ok">0</b></div>
+          <div><small>ต่าง ≤ 5%</small><b id="stk-minor">0</b></div>
+          <div><small>ต้องนับซ้ำ</small><b id="stk-re" style="color:var(--red)">0</b></div>
+        </div>
+        <ol class="stk-rules">
+          <li>ผลต่างเกิน 5% ต้องให้พนักงานอีกคนนับซ้ำในแท็บนับสต็อก แล้วกดโหลดยอดนับใหม่</li>
+          <li>สินค้าที่นับเจอแต่ไม่มีในระบบ ให้ระบุตำแหน่งที่พบในช่องหมายเหตุ</li>
+          <li>สินค้าชำรุด หมดอายุ หรือบรรจุภัณฑ์เสียหาย ให้ระบุในหมายเหตุ</li>
+        </ol>
+        <div class="sign3">
+          <div><small>ผู้นับสต็อก</small><div class="line print-only"></div><b id="stk-counter">–</b></div>
+          <div><small>ผู้ตรวจสอบ</small><div class="line print-only"></div><input id="stk-ver" placeholder="ชื่อผู้ตรวจสอบ" style="text-align:center"><div class="field-err" id="stk-ver-err"></div></div>
+          <div><small>ผู้อนุมัติปรับปรุงสต็อก</small><div class="line print-only"></div><input id="stk-appr" placeholder="ชื่อผู้อนุมัติ" style="text-align:center"></div>
+        </div>
+        <p class="hint no-print" id="stk-state" style="margin-top:10px"></p>
+        <p class="print-only" style="margin-top:10px;color:#666;font-size:10px" id="stk-printed"></p>
+        <div class="rp-actions no-print" id="stk-actions">
+          <button type="button" class="btn ghost" id="stk-print" style="width:100%">พิมพ์ / บันทึก PDF</button>
+          <button class="btn" type="submit">บันทึกใบตรวจนับ</button>
+        </div>
+        <button type="button" class="btn no-print" id="stk-approve" style="margin-top:10px;background:var(--amber);color:var(--ink)" hidden>อนุมัติปรับยอดตามที่นับ</button>
+      </div>
+    </form>
+
     <!-- ปรับสต็อก -->
     <form class="panel hidden" id="tab-adj" action="javascript:void(0)">
       <h2>ปรับสต็อก</h2>
@@ -604,6 +676,7 @@
           <option value="adj">ปรับสต็อก (stock_adjustments)</option>
           <option value="sale" id="histSaleOpt">ขายออก (inventory_cashier)</option>
           <option value="report">ใบสรุปกะ (shift_report)</option>
+          <option value="count">ใบตรวจนับ (stock_count)</option>
         </select>
         <select id="hist-booth"><option value="">บูธนี้</option><option value="ALL" id="histAllOpt" hidden>ทุกบูธ (admin)</option></select>
       </div>
@@ -688,15 +761,24 @@ function api(fn, ...args){
     $('apiBox').hidden = false;
     return Promise.reject(new Error('วางลิงก์ /exec ของ Apps Script ในช่องลิงก์เชื่อมต่อก่อน'));
   }
-  return fetch(apiUrl().trim(), {
+  // คำสั่งที่ส่งซ้ำได้อย่างปลอดภัย (อ่านข้อมูล / เปลี่ยนรหัส) ถ้าเน็ตสะดุดจะลองใหม่ให้อัตโนมัติ
+  const SAFE_RETRY = ['login','whoami','getItems','getBooths','getLastCount','getLastActual','getSalesTotal',
+                      'getShiftReport','getRecent','changePassword'];
+  const tries = SAFE_RETRY.indexOf(fn) > -1 ? 3 : 1;
+  const once = () => fetch(apiUrl().trim(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // แบบนี้ไม่ติด CORS
     body: JSON.stringify({ fn, args })
-  })
+  });
+  const attempt = n => once().catch(err => {
+    if (n > 1) return new Promise(r => setTimeout(r, 1200)).then(() => attempt(n - 1));
+    throw err;
+  });
+  return attempt(tries)
   .catch(() => {
     throw new Error(navigator.onLine === false
       ? 'ไม่มีอินเทอร์เน็ต ตรวจสอบสัญญาณแล้วลองใหม่'
-      : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ระบบหลังบ้านอาจยังไม่ได้ Deploy หรือขอสิทธิ์ใหม่ แจ้งผู้ดูแลให้เปิดลิงก์ /exec?ping=1 เพื่อตรวจสอบ');
+      : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ (สัญญาณอาจไม่เสถียร) กดบันทึกอีกครั้ง ถ้ายังไม่ได้ให้แจ้งผู้ดูแล');
   })
   .then(r => r.json().catch(() => {
     $('apiBox').hidden = false;
@@ -823,7 +905,7 @@ async function enterApp(){
   // แท็บขายออกเปิดให้ทุกผู้ใช้
   $('tabSaleBtn').hidden = false; $('histSaleOpt').hidden = false;
   refreshToday();
-  setupShifts(); $('sh-date').value = todayISO(); $('rp-date').value = todayISO();
+  setupShifts(); $('sh-date').value = todayISO(); $('rp-date').value = todayISO(); $('stk-date').value = todayISO();
   loadBooths();
   try {
     const list = await api('getItems', S.token);
@@ -863,10 +945,11 @@ function setBooth(b, silent){
   $('boothChange').hidden = false;
   $('cnt-sheet').textContent = b.countSheet || 'inventory_Electric';
   $('rp-booth').textContent = b.name; $('rp-zone').textContent = b.zone || '–';
+  $('stk-booth').textContent = b.name + (b.zone ? ' · ' + b.zone : '');
   $('adj-to').innerHTML = '<option value="">เลือกบูธปลายทาง</option>' +
     S.allBooths.filter(x => x.id !== b.id).map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>').join('');
   if (changed) {
-    rpStale(); refreshToday(); $('hist-out').innerHTML = '<div class="empty">กด "โหลดรายการ" เพื่อดูข้อมูล</div>';
+    rpStale(); stkStale(); refreshToday(); $('hist-out').innerHTML = '<div class="empty">กด "โหลดรายการ" เพื่อดูข้อมูล</div>';
     if (pbItem) showLastCount(pbItem);
     if (!silent) toast('เปลี่ยนเป็นบูธ ' + b.name);
   }
@@ -978,7 +1061,7 @@ function runChecks(list){
 /* ---------- tabs ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
-  ['count','sale','shift','report','adj','hist'].forEach(t => $('tab-'+t).classList.toggle('hidden', t !== b.dataset.tab));
+  ['count','sale','shift','report','stk','adj','hist'].forEach(t => $('tab-'+t).classList.toggle('hidden', t !== b.dataset.tab));
 });
 
 /* ---------- item picker ---------- */
@@ -1674,6 +1757,96 @@ $('tab-report').onsubmit = e => {
     $('rp-saved').textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH') + ' ถ้าบันทึกอีกครั้งจะเป็นการแก้ไขใบเดิม';
   });
 };
+
+/* ---------- ใบตรวจนับ ---------- */
+let STK = null;
+const STK_LABEL = { ok: 'ตรง', minor: 'ต่างเล็กน้อย', recount: 'นับซ้ำ', recounted: 'นับซ้ำแล้ว', first: 'นับครั้งแรก', notfound: 'ไม่มีในระบบ' };
+function stkStale(){ STK = null; $('stk-body').classList.add('hidden'); $('stk-doc').textContent = '–'; }
+['stk-date'].forEach(id => $(id).addEventListener('change', stkStale));
+function stkNotes(){
+  const o = {};
+  document.querySelectorAll('#stk-table input[data-code]').forEach(i => { if (i.value.trim()) o[i.dataset.code] = i.value.trim(); });
+  return o;
+}
+function renderStk(r){
+  STK = r;
+  $('stk-doc').textContent = r.docNo;
+  $('stk-sheet').textContent = r.sheet;
+  $('stk-time').textContent = r.start ? r.start + ' – ' + r.end + ' น.' : '–';
+  const locked = r.saved && r.saved.status === 'อนุมัติแล้ว';
+  let h = '<thead><tr><th style="width:40px">ลำดับ</th><th>รหัส</th><th>รายการสินค้า</th><th class="n">ในระบบ</th><th class="n">นับได้</th>' +
+          '<th class="n">ผลต่าง</th><th>สถานะ</th><th>หมายเหตุ / สภาพ</th></tr></thead><tbody>';
+  r.lines.forEach((l, i) => {
+    const d = l.diff === null ? '–' : (l.diff > 0 ? '+' : '') + l.diff;
+    h += '<tr class="' + (l.status === 'recount' ? 'bad' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(l.code) + '</td>' +
+      '<td style="white-space:normal">' + esc(l.desc) + (l.times > 1 ? '<br><small style="color:var(--muted)">นับ ' + l.times + ' ครั้ง · ' + esc(l.by) + '</small>' : '') + '</td>' +
+      '<td class="n">' + (l.system === null ? '–' : l.system) + '</td><td class="n">' + l.counted + '</td><td class="n">' + d +
+      (l.pct ? '<br><small style="color:var(--muted)">' + l.pct + '%</small>' : '') + '</td>' +
+      '<td><span class="st ' + l.status + '">' + STK_LABEL[l.status] + '</span></td>' +
+      '<td><input data-code="' + esc(l.code) + '" value="' + esc(l.note || '') + '" placeholder="' +
+      (l.status === 'notfound' ? 'ตำแหน่งที่พบ' : 'หมายเหตุ') + '"' + (locked ? ' disabled' : '') + '></td></tr>';
+  });
+  $('stk-table').innerHTML = h + '</tbody>';
+  const s = r.summary;
+  $('stk-n').textContent = s.items; $('stk-ok').textContent = s.ok + s.recounted;
+  $('stk-minor').textContent = s.minor; $('stk-re').textContent = s.recount;
+  $('stk-counter').textContent = r.counters.length ? r.counters.join(', ') : r.counter;
+  const sv = r.saved;
+  if (sv) {
+    if (sv.round) $('stk-round').value = sv.round;
+    $('stk-shelf').value = sv.shelf || ''; $('stk-ver').value = sv.verifier || ''; $('stk-appr').value = sv.approver || '';
+  } else { $('stk-ver').value = ''; $('stk-appr').value = ''; }
+  $('stk-state').innerHTML = locked
+    ? '<span class="stk-badge">อนุมัติแล้ว</span> เมื่อ ' + esc(sv.approvedAt) + ' ใบนี้แก้ไขไม่ได้แล้ว'
+    : sv ? 'บันทึกล่าสุด ' + esc(sv.savedAt) + ' บันทึกอีกครั้งจะเป็นการแก้ไขใบเดิม' : '';
+  $('stk-actions').querySelector('button[type=submit]').hidden = locked;
+  $('stk-approve').hidden = locked || !r.canApprove;
+  ['stk-round','stk-shelf','stk-ver','stk-appr'].forEach(id => $(id).disabled = locked);
+  $('stk-printed').textContent = 'พิมพ์เมื่อ ' + new Date().toLocaleString('th-TH') + ' · ' + r.docNo;
+  $('stk-body').classList.remove('hidden');
+}
+$('stk-load').onclick = async () => {
+  if (!runChecks([['stk-date', $('stk-date').value ? '' : 'เลือกวันที่']])) return;
+  if (!needBooth()) return;
+  const b = $('stk-load'); b.disabled = true; b.textContent = 'กำลังโหลด…';
+  try { renderStk(await api('getStockCount', S.token, isoToThai($('stk-date').value), S.booth.id)); }
+  catch(e){ stkStale(); toast(e.message, true); }
+  finally { b.disabled = false; b.textContent = 'โหลดยอดนับ'; }
+};
+function stkPayload(){
+  return { booth: S.booth.id, date: STK.date, round: $('stk-round').value, shelf: $('stk-shelf').value.trim(),
+           verifier: $('stk-ver').value.trim(), approver: $('stk-appr').value.trim(), notes: stkNotes() };
+}
+$('tab-stk').onsubmit = e => {
+  e.preventDefault();
+  if (!STK) return toast('กด "โหลดยอดนับ" ก่อน', true);
+  if (!needBooth()) return;
+  submitWith(e.target, 'saveStockCount', stkPayload(), r => {
+    toast((r.updated ? 'แก้ไขใบตรวจนับแล้ว · ' : 'บันทึกใบตรวจนับแล้ว · ') + r.id);
+    $('stk-state').textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH') + ' บันทึกอีกครั้งจะเป็นการแก้ไขใบเดิม';
+  });
+};
+$('stk-approve').onclick = async () => {
+  if (!STK) return;
+  if (STK.summary.recount) return toast('ยังมีรายการที่ต้องนับซ้ำ ให้คนอื่นนับซ้ำแล้วโหลดยอดนับใหม่', true);
+  if (!runChecks([['stk-ver', $('stk-ver').value.trim() ? '' : 'ใส่ชื่อผู้ตรวจสอบ']])) return;
+  const n = STK.lines.filter(l => l.system !== null && l.diff).length;
+  if (!confirm('อนุมัติใบ ' + STK.docNo + '\nระบบจะสร้างรายการ "ปรับยอด" ' + n + ' รายการ ให้ยอดในระบบเท่ากับยอดนับ\nอนุมัติแล้วแก้ไขไม่ได้')) return;
+  const b = $('stk-approve'); b.disabled = true; b.textContent = 'กำลังอนุมัติ…';
+  try {
+    const r = await api('approveStockCount', S.token, stkPayload());
+    toast('อนุมัติแล้ว · ปรับยอด ' + r.adjusted + ' รายการ');
+    $('stk-load').click();
+  } catch(e){ toast(e.message, true); }
+  finally { b.disabled = false; b.textContent = 'อนุมัติปรับยอดตามที่นับ'; }
+};
+$('stk-print').onclick = () => {
+  if (!STK) return toast('กด "โหลดยอดนับ" ก่อน', true);
+  document.body.classList.add('printing-stk');
+  window.print();
+  setTimeout(() => document.body.classList.remove('printing-stk'), 500);
+};
+window.addEventListener('afterprint', () => document.body.classList.remove('printing-stk'));
 
 /* ---------- ปรับสต็อก ---------- */
 $('tab-adj').onsubmit = e => {
