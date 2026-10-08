@@ -83,6 +83,10 @@
   header.bar button{background:transparent;border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:var(--radius-s);padding:6px 12px;cursor:pointer}
   nav.tabs{display:flex;background:var(--paper);border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:60px;z-index:4}
   nav.tabs button{flex:1;min-width:88px;border:0;background:none;padding:13px 8px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+  .tab-badge{display:inline-block;margin-left:4px;min-width:18px;padding:0 5px;border-radius:9px;background:var(--amber);color:var(--ink);font-size:.75rem;line-height:18px}
+  .pend{border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:10px 12px;margin-top:8px;background:#FFFBF2}
+  .pend .acts{display:flex;gap:8px;margin-top:8px}
+  .pend .acts button{flex:1;min-height:40px}
   nav.tabs button[aria-selected="true"]{color:var(--shelf);border-bottom-color:var(--shelf)}
   main{max-width:640px;margin:0 auto;padding:18px 16px 60px}
   .panel{background:var(--paper);border-radius:var(--radius-l);padding:20px;border:1px solid var(--line)}
@@ -186,6 +190,7 @@
   .pull-note button{margin:4px 6px 0 0;border:1.5px solid var(--shelf);background:#fff;color:var(--shelf);border-radius:999px;padding:3px 10px;font-weight:600;cursor:pointer;font-size:.82rem}
   .saved-note{margin-top:10px;padding:10px 12px;border-radius:var(--radius-s);background:#EAF4EE;border-left:4px solid var(--shelf);font-size:.9rem}
   .saved-note small{color:var(--muted)}
+  .saved-note.queued{background:#FFF6E2;border-left-color:var(--amber)}
   .saved-note.bad{background:#FBEDEA;border-left-color:var(--red);color:var(--red)}
   #stk-table td.n,#stk-table th.n{text-align:right}
   #stk-table tr.bad td{background:#FBEDEA}
@@ -379,7 +384,7 @@
       <strong>Happitat Project</strong>
       <span id="who"></span>
     </div>
-    <div class="acts"><button id="pwOpen" type="button">เปลี่ยนรหัส</button><button id="logoutBtn" type="button">ออกจากระบบ</button></div>
+    <div class="acts"><button id="qBadge" type="button" hidden style="background:var(--amber);color:var(--ink);border-color:var(--amber)">รอส่ง 0</button><button id="pwOpen" type="button">เปลี่ยนรหัส</button><button id="logoutBtn" type="button">ออกจากระบบ</button></div>
   </header>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="count" aria-selected="true">นับสต็อก</button>
@@ -387,7 +392,7 @@
     <button role="tab" data-tab="shift" aria-selected="false">สรุปกะ</button>
     <button role="tab" data-tab="report" aria-selected="false">ใบสรุปกะ</button>
     <button role="tab" data-tab="stk" aria-selected="false">ใบตรวจนับ</button>
-    <button role="tab" data-tab="adj" aria-selected="false">ปรับสต็อก</button>
+    <button role="tab" data-tab="adj" aria-selected="false">ปรับสต็อก<span id="adjBadge" class="tab-badge" hidden></span></button>
     <button role="tab" data-tab="hist" aria-selected="false">ประวัติ</button>
   </nav>
 
@@ -592,6 +597,11 @@
     <form class="panel hidden" id="tab-adj" action="javascript:void(0)">
       <h2>ปรับสต็อก</h2>
       <p class="sub">รับเข้า ชำรุด โอนออก หรือปรับยอด บันทึกลงชีต stock_adjustments</p>
+      <div id="adj-pend-box" hidden style="margin-bottom:14px">
+        <h3 style="margin:0;font-size:1rem" id="adj-pend-title">รออนุมัติ</h3>
+        <div id="adj-pend"></div>
+      </div>
+      <p class="hint" id="adj-flow-note" style="margin:-4px 0 10px"></p>
       <div class="row">
         <div class="field"><label for="adj-type" class="req">ประเภท</label>
           <select id="adj-type" required>
@@ -620,7 +630,6 @@
         <div class="field"><label for="adj-qty" class="req">จำนวน</label><input id="adj-qty" type="number" step="1" inputmode="numeric">
           <div class="field-err" id="adj-qty-err"></div>
           <small class="hint">ประเภท "ปรับยอด" ใส่ติดลบได้</small></div>
-        <div class="field"><label for="adj-appr">ผู้อนุมัติ</label><input id="adj-appr" placeholder="ชื่อหัวหน้ากะ"></div>
       </div>
       <div class="field"><label for="adj-remark" id="adj-remark-label">หมายเหตุ</label><textarea id="adj-remark" rows="2"></textarea><div class="field-err" id="adj-remark-err"></div></div>
       <button class="btn" type="submit">บันทึกการปรับสต็อก</button>
@@ -684,6 +693,28 @@
       <div style="margin-top:10px">
         <button class="btn ghost" id="hist-load" type="button" style="width:100%">โหลดรายการ</button>
       </div>
+      <div id="sys-box" hidden style="margin:12px 0">
+        <button type="button" class="btn ghost" id="sys-load" style="width:100%">สถานะระบบ (admin): ผู้ใช้ออนไลน์ และความเร็ว</button>
+        <div id="sys-out"></div>
+        <button type="button" class="btn ghost" id="bth-load" style="width:100%;margin-top:10px">จัดการบูธ (admin): เพิ่ม / แก้ไข / ปิดบูธ</button>
+        <div id="bth-out" hidden>
+          <div class="table-wrap"><table><thead><tr><th>รหัส</th><th>ชื่อบูธ</th><th>Zone</th><th>พนักงาน</th><th>ชีตนับ</th><th>สถานะ</th><th></th></tr></thead><tbody id="bth-rows"></tbody></table></div>
+          <div class="card" style="margin-top:10px;padding:12px">
+            <h3 id="bth-title" style="margin:0 0 8px;font-size:1rem">เพิ่มบูธใหม่</h3>
+            <div class="field"><label class="req">รหัสบูธ (BoothID)</label><input id="bth-id" maxlength="12" placeholder="เช่น CTW01" autocapitalize="characters"></div>
+            <div class="field"><label class="req">ชื่อบูธ</label><input id="bth-name" placeholder="เช่น Bakery เซ็นทรัลเวิลด์"></div>
+            <div class="field"><label>Zone / สถานที่</label><input id="bth-zone"></div>
+            <div class="field"><label>รหัสพนักงานประจำบูธ (คั่นด้วย ,)</label><input id="bth-staff" inputmode="numeric" placeholder="เช่น 10234, 10567"></div>
+            <div class="field"><label>ชีตนับสต็อก (เว้นว่าง = inventory_รหัสบูธ)</label><input id="bth-sheet"></div>
+            <label style="display:flex;gap:8px;align-items:center;margin:6px 0 10px"><input type="checkbox" id="bth-active" checked style="width:auto"> เปิดใช้งาน</label>
+            <div style="display:flex;gap:8px">
+              <button type="button" class="btn" id="bth-save" style="flex:1">บันทึกบูธ</button>
+              <button type="button" class="btn ghost" id="bth-new" style="flex:0 0 auto">ล้างฟอร์ม</button>
+            </div>
+            <p class="hint" style="margin-top:8px">บูธใหม่จะสร้างชีตนับสต็อกให้อัตโนมัติ · พนักงานต้องออกจากระบบแล้วเข้าใหม่จึงจะเห็นบูธ · ปิดบูธ = เลิกใช้ ข้อมูลเดิมยังอยู่ครบ</p>
+          </div>
+        </div>
+      </div>
       <div class="table-wrap" id="hist-out"><div class="empty">กด "โหลดรายการ" เพื่อดูข้อมูล</div></div>
     </section>
   </main>
@@ -746,45 +777,110 @@ function validApi(u){
 }
 const IN_GAS = !!(window.google && google.script && google.script.run);
 
+function netError(){
+  const e = new Error(navigator.onLine === false
+    ? 'ไม่มีอินเทอร์เน็ต ตรวจสอบสัญญาณแล้วลองใหม่'
+    : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ (สัญญาณอาจไม่เสถียร)');
+  e.net = true; return e;
+}
 function api(fn, ...args){
   const fail = msg => {
     if (msg.includes('SESSION_EXPIRED')) showLogin('หมดเวลาใช้งาน เข้าสู่ระบบอีกครั้ง');
     return new Error(msg.indexOf('Error: ') === 0 ? msg.slice(7) : msg);
   };
+  const t0 = performance.now();
+  const done = j => {
+    S.perf = (S.perf || []).slice(-49); S.perf.push({ fn: fn, rtt: Math.round(performance.now() - t0), srv: j.ms || 0 });
+    if (!j.ok) throw fail(j.error || 'เกิดข้อผิดพลาด'); return j.data;
+  };
   if (IN_GAS) {
     return new Promise((resolve, reject) => {
-      google.script.run.withSuccessHandler(resolve)
-        .withFailureHandler(err => reject(fail((err && err.message) || String(err))))[fn](...args);
-    });
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(err => {
+        const m = (err && err.message) || String(err);
+        reject(/NetworkError|HTTP 0|Failed to fetch|network/i.test(m) ? netError() : fail(m));
+      }).rpc(fn, args);
+    }).then(done);
   }
   if (!validApi(apiUrl())) {
     $('apiBox').hidden = false;
     return Promise.reject(new Error('วางลิงก์ /exec ของ Apps Script ในช่องลิงก์เชื่อมต่อก่อน'));
   }
-  // คำสั่งที่ส่งซ้ำได้อย่างปลอดภัย (อ่านข้อมูล / เปลี่ยนรหัส) ถ้าเน็ตสะดุดจะลองใหม่ให้อัตโนมัติ
-  const SAFE_RETRY = ['login','whoami','getItems','getBooths','getLastCount','getLastActual','getSalesTotal',
-                      'getShiftReport','getRecent','changePassword'];
-  const tries = SAFE_RETRY.indexOf(fn) > -1 ? 3 : 1;
+  // ทุกคำสั่งส่งซ้ำได้อย่างปลอดภัย: คำสั่งอ่านไม่เปลี่ยนข้อมูล คำสั่งบันทึกมี cid (เซิร์ฟเวอร์กันบันทึกซ้ำ)
+  // ยกเว้นคำสั่งที่ไม่มี cid ด้านล่าง ส่งครั้งเดียว
+  const NO_RETRY = ['saveShiftReport', 'saveStockCount', 'approveStockCount', 'adminSaveBooth', 'decideAdjustment', 'logout'];
+  // บันทึก: ลอง 3 ครั้ง (~4 วิ) แล้วเก็บเข้าคิวในเครื่อง · อ่านข้อมูล: ลอง 4 ครั้ง
+  const tries = NO_RETRY.indexOf(fn) > -1 ? 1 : (/^save/.test(fn) ? 3 : 4);
+  const body = JSON.stringify({ fn, args });
   const once = () => fetch(apiUrl().trim(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // แบบนี้ไม่ติด CORS
-    body: JSON.stringify({ fn, args })
-  });
-  const attempt = n => once().catch(err => {
-    if (n > 1) return new Promise(r => setTimeout(r, 1200)).then(() => attempt(n - 1));
+    body: body
+  }).then(r => r.text().then(txt => {
+    let j = null;
+    try { j = JSON.parse(txt); } catch(e){}
+    if (j && typeof j === 'object' && 'ok' in j) {
+      // งานชนกัน/โควตาชั่วคราวของ Google: ถือเป็นปัญหาชั่วคราว ให้ลองใหม่อัตโนมัติ
+      if (!j.ok && /กำลังบันทึกรายการของคนอื่น|too many|simultaneous|invoked|timed out|Lock timeout|Service unavailable|ไม่สามารถใช้บริการ/i.test(j.error || '')) {
+        const e = new Error('ระบบมีผู้ใช้พร้อมกันมาก กำลังลองใหม่…'); e.hiccup = true; e.kind = 'BUSY'; e.detail = String(j.error).slice(0, 160); throw e;
+      }
+      return j;
+    }
+    throw serverHiccup(r.status, txt);                        // Google ตอบเป็นหน้าเว็บ (ไม่ใช่ข้อมูล)
+  }), () => { throw netError(); });
+  const wait = k => new Promise(r => setTimeout(r, [0, 1200, 2500, 5000][k] + Math.random() * 800));  // เว้นจังหวะ กันทุกเครื่องยิงพร้อมกัน
+  const attempt = k => once().catch(err => {
+    if (k + 1 < tries && (err.net || err.hiccup) && !err.fatal && navigator.onLine !== false) return wait(k + 1).then(() => attempt(k + 1));
     throw err;
   });
-  return attempt(tries)
-  .catch(() => {
-    throw new Error(navigator.onLine === false
-      ? 'ไม่มีอินเทอร์เน็ต ตรวจสอบสัญญาณแล้วลองใหม่'
-      : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ (สัญญาณอาจไม่เสถียร) กดบันทึกอีกครั้ง ถ้ายังไม่ได้ให้แจ้งผู้ดูแล');
-  })
-  .then(r => r.json().catch(() => {
-    if (!API_URL) $('apiBox').hidden = false;
-    throw new Error('ลิงก์เชื่อมต่อไม่ถูกต้อง หรือยังไม่ได้ Deploy เวอร์ชันใหม่');
-  }))
-  .then(j => { if (!j.ok) throw fail(j.error || 'เกิดข้อผิดพลาด'); return j.data; });
+  return attempt(0).then(done, err => {
+    if (err.hiccup) logHiccup(fn, err);
+    throw err;
+  });
+}
+
+/** Google ตอบกลับเป็นหน้าเว็บแทนข้อมูล: แยกสาเหตุ แล้วแสดงข้อความที่ทำต่อได้ */
+function serverHiccup(status, txt){
+  const t = String(txt || '');
+  const title = ((t.match(/<title>([^<]*)<\/title>/i) || [])[1] || '').trim();
+  const plain = t.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  let msg, fatal = false, kind;
+  if (/authoriz|ต้องได้รับสิทธิ์|ให้สิทธิ์|permission/i.test(plain)) {
+    kind = 'AUTH'; fatal = true;
+    msg = 'ระบบหลังบ้านยังไม่ได้รับอนุญาต (ผู้ดูแลต้องเปิด Apps Script แล้วกด Run ฟังก์ชัน authorizeAll 1 ครั้ง)';
+  } else if (/accounts\.google\.com|ServiceLogin|Sign in|ลงชื่อเข้าใช้/i.test(t)) {
+    kind = 'LOGIN_PAGE'; fatal = true;
+    msg = 'ลิงก์เชื่อมต่อถูกตั้งให้ต้องล็อกอิน Google (ผู้ดูแลต้องตั้ง Deploy: Who has access = Anyone)';
+  } else if (/too many|invoked too many|simultaneous|quota|ใช้งานมากเกินไป/i.test(plain)) {
+    kind = 'BUSY';
+    msg = 'ระบบ Google มีผู้ใช้พร้อมกันมากเกินไป รอสักครู่แล้วลองใหม่';
+  } else if (/not found|ไม่พบ|unable to open|deleted|ถูกลบ/i.test(plain) || status === 404) {
+    kind = 'NOT_FOUND'; fatal = true;
+    msg = 'ไม่พบระบบหลังบ้านตามลิงก์ (ผู้ดูแลตรวจสอบว่า Deploy ยังเปิดอยู่)';
+  } else {
+    kind = 'TEMP';
+    msg = 'ระบบ Google ไม่ตอบชั่วคราว ลองใหม่อีกครั้ง';
+  }
+  const e = new Error(msg);
+  e.hiccup = true; e.fatal = fatal; e.kind = kind;
+  e.detail = (status || '') + ' ' + (title || plain.slice(0, 160));
+  return e;
+}
+/** เก็บรายละเอียดปัญหาไว้ในเครื่อง แล้วส่งให้ admin ดูเมื่อเชื่อมต่อได้ (ช่วยหาสาเหตุจริง) */
+function logHiccup(fn, err){
+  try {
+    const k = 'happitat_hiccups', a = JSON.parse(localStorage.getItem(k) || '[]');
+    a.push({ at: new Date().toISOString(), fn: fn, kind: err.kind, detail: err.detail, user: S.profile ? S.profile.user : '' });
+    localStorage.setItem(k, JSON.stringify(a.slice(-20)));
+  } catch(e){}
+}
+let hiccupSending = false;
+function sendHiccups(){
+  if (hiccupSending || !S.token) return;
+  let a = []; try { a = JSON.parse(localStorage.getItem('happitat_hiccups') || '[]'); } catch(e){}
+  if (!a.length) return;
+  hiccupSending = true;
+  api('clientLog', S.token, a).then(() => { try { localStorage.removeItem('happitat_hiccups'); } catch(e){} })
+    .catch(() => {}).then(() => { hiccupSending = false; });
 }
 
 function toast(msg, bad){
@@ -900,6 +996,7 @@ function showLogin(msg){
 }
 
 $('logoutBtn').onclick = async () => {
+  if (qGet().length && !confirm('ยังมี ' + qGet().length + ' รายการที่ยังไม่ได้ส่ง ถ้าออกจากระบบ รายการจะยังอยู่ในเครื่องนี้ และจะส่งเมื่อเข้าระบบอีกครั้ง\nออกจากระบบ?')) return;
   try { await api('logout', S.token); } catch(e) {}
   showLogin('');
 };
@@ -913,6 +1010,7 @@ async function enterApp(){
   refreshToday();
   setupShifts(); $('sh-date').value = todayISO(); $('rp-date').value = todayISO(); $('stk-date').value = todayISO();
   loadBooths();
+  updateQBadge(); setTimeout(flushQueue, 2000);
   try {
     const list = await api('getItems', S.token);
     S.items = {}; S.barcodes = {}; const dl = $('itemList'); dl.innerHTML = '';
@@ -932,8 +1030,12 @@ function boothKey(){ return 'happitat_booth_' + (S.profile ? S.profile.user : ''
 async function loadBooths(){
   try {
     const r = await api('getBooths', S.token);
-    S.booths = r.mine; S.allBooths = r.all;
-    $('histAllOpt').hidden = !r.admin;
+    S.booths = r.mine; S.allBooths = r.all; S.role = r.role || (r.admin ? 'admin' : 'user');
+    S.canApprove = S.role !== 'user';
+    $('adj-flow-note').textContent = S.canApprove
+      ? 'คุณเป็น ' + (S.role === 'admin' ? 'admin' : 'Supervisor') + ': บันทึกแล้วตัดสต็อกทันที'
+      : 'บันทึกแล้วจะเป็น "คำขอ" ต้องให้ Supervisor อนุมัติก่อนจึงจะตัดสต็อก';
+    $('histAllOpt').hidden = !r.admin; $('sys-box').hidden = !r.admin;
     let saved = ''; try { saved = localStorage.getItem(boothKey()) || ''; } catch(e){}
     const keep = S.booths.find(b => b.id === saved);
     if (keep) { setBooth(keep, true); askShiftIfNeeded(); }
@@ -955,6 +1057,7 @@ function setBooth(b, silent){
   $('adj-to').innerHTML = '<option value="">เลือกบูธปลายทาง</option>' +
     S.allBooths.filter(x => x.id !== b.id).map(x => '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>').join('');
   if (changed) {
+    loadPending();
     rpStale(); stkStale(); refreshToday(); $('hist-out').innerHTML = '<div class="empty">กด "โหลดรายการ" เพื่อดูข้อมูล</div>';
     if (pbItem) showLastCount(pbItem);
     if (!silent) toast('เปลี่ยนเป็นบูธ ' + b.name);
@@ -977,6 +1080,7 @@ function showBoothPicker(cancelable){
   $('app').classList.add('hidden'); $('boothpick').classList.remove('hidden');
 }
 $('boothChange').onclick = () => showBoothPicker(true);
+$('qBadge').onclick = () => flushQueue(true);
 $('shiftName').onclick = () => showShiftPicker();
 $('boothCancel').onclick = () => { $('boothpick').classList.add('hidden'); $('app').classList.remove('hidden'); };
 function needBooth(){
@@ -991,8 +1095,9 @@ async function showLastCount(it){
   try {
     const r = await api('getLastCount', S.token, it.code, S.booth.id);
     if (pbItem !== it) return;
-    el.textContent = r ? 'นับล่าสุดในบูธนี้: ' + r.total + ' ชิ้น · ' + r.date + ' ' + String(r.time).slice(0,5) + ' · ' + r.by
-                       : 'ยังไม่เคยนับสินค้านี้ในบูธนี้';
+    el.textContent = !r ? 'ยังไม่เคยนับสินค้านี้ในบูธนี้'
+      : (r.total === null ? 'ยังไม่เคยนับ' : 'นับล่าสุด: ' + r.total + ' ชิ้น · ' + r.date + ' ' + String(r.time).slice(0,5) + ' · ' + r.by) +
+        ' | คงเหลือในระบบตอนนี้: ' + r.balance + ' ชิ้น';
   } catch(e){}
 }
 
@@ -1068,6 +1173,7 @@ function runChecks(list){
 document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
   ['count','sale','shift','report','stk','adj','hist'].forEach(t => $('tab-'+t).classList.toggle('hidden', t !== b.dataset.tab));
+  if (b.dataset.tab === 'adj') loadPending();
 });
 
 /* ---------- item picker ---------- */
@@ -1416,12 +1522,53 @@ $('cnt-img').onchange = async e => {
   catch(err){ toast(err.message, true); }
 };
 
+/* ---------- คิวออฟไลน์: ไม่มีสัญญาณ = เก็บในเครื่อง แล้วส่งเองเมื่อสัญญาณกลับมา ---------- */
+const QUEUE_FNS = ['saveCount', 'saveSale', 'saveShift', 'saveAdjustment'];
+const QKEY = 'happitat_queue';
+const qGet = () => { try { return JSON.parse(localStorage.getItem(QKEY) || '[]'); } catch(e){ return []; } };
+const qSet = q => { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch(e){ toast('หน่วยความจำเครื่องเต็ม บันทึกออฟไลน์ไม่ได้', true); } updateQBadge(); };
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+function updateQBadge(){
+  const q = qGet(), b = $('qBadge'); if (!b) return;
+  b.hidden = !q.length; b.textContent = 'รอส่ง ' + q.length;
+}
+const Q_LABEL = { saveCount: 'นับสต็อก', saveSale: 'ขายออก', saveShift: 'สรุปกะ', saveAdjustment: 'ปรับสต็อก' };
+let flushing = false;
+async function flushQueue(manual){
+  if (flushing || !S.token) return;
+  sendHiccups();
+  let q = qGet(); if (!q.length) { if (manual) toast('ไม่มีรายการรอส่ง'); return; }
+  flushing = true; $('qBadge').textContent = 'กำลังส่ง…';
+  let sent = 0;
+  try {
+    while (q.length) {
+      const it = q[0];
+      try { await api(it.fn, S.token, it.payload); sent++; }
+      catch(e){
+        if (e.net || e.hiccup) break;                                          // ยังไม่มีสัญญาณ ค่อยลองใหม่
+        if (/SESSION_EXPIRED|เปลี่ยนรหัสผ่าน/.test(e.message)) break;
+        const failed = JSON.parse(localStorage.getItem('happitat_failed') || '[]');
+        failed.push(Object.assign({ error: e.message }, it)); localStorage.setItem('happitat_failed', JSON.stringify(failed.slice(-50)));
+        toast('ส่งไม่สำเร็จ (' + Q_LABEL[it.fn] + ' ' + (it.payload.desc || '') + '): ' + e.message, true);
+      }
+      q = qGet().filter(x => x.payload.cid !== it.payload.cid); qSet(q);
+    }
+  } finally {
+    flushing = false; updateQBadge();
+    if (sent) toast('ส่งรายการที่ค้างในเครื่องแล้ว ' + sent + ' รายการ');
+  }
+}
+window.addEventListener('online', () => setTimeout(flushQueue, 1500));
+setInterval(() => { if (navigator.onLine !== false) flushQueue(); }, 30000);
+
 async function submitWith(form, fn, payload, onDone){
   const btn = form.querySelector('button[type=submit]'), label = btn.textContent;
   btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
   let note = form.querySelector('.saved-note');
   if (!note) { note = document.createElement('div'); note.className = 'saved-note'; btn.insertAdjacentElement('afterend', note); }
   note.hidden = true;
+  const queueable = QUEUE_FNS.indexOf(fn) > -1;
+  if (queueable) { payload.cid = payload.cid || uid(); payload.at = payload.at || new Date().toISOString(); }
   try {
     const r = await api(fn, S.token, payload);
     onDone(r);
@@ -1432,8 +1579,19 @@ async function submitWith(form, fn, payload, onDone){
     note.hidden = false;
   }
   catch(err){
-    toast(err.message, true);
-    note.className = 'saved-note bad'; note.textContent = '✕ ยังไม่ได้บันทึก: ' + err.message; note.hidden = false;
+    if ((err.net || (err.hiccup && !err.fatal)) && queueable) {
+      const q = qGet(); q.push({ fn: fn, payload: payload, user: S.profile && S.profile.user, booth: S.booth && S.booth.id }); qSet(q);
+      const p = payload;
+      onDone({ id: 'รอส่ง', queued: true, total: (p.perBox * p.boxQty) + (Number(p.loose) || 0), perBox: p.perBox,
+               qty: p.qty, amount: (p.qty || 0) * (p.price || 0), diff: 0, to: '' });
+      toast((err.net ? 'ไม่มีสัญญาณ' : 'ระบบ Google ไม่ตอบชั่วคราว') + ': เก็บรายการไว้ในเครื่องแล้ว จะส่งให้อัตโนมัติ');
+      note.className = 'saved-note queued';
+      note.innerHTML = '⏳ เก็บไว้ในเครื่องแล้ว (รอส่ง ' + q.length + ' รายการ)<br><small>ระบบจะส่งเองเมื่อมีสัญญาณ ห้ามล้างข้อมูลเบราว์เซอร์หรือออกจากระบบจนกว่าจะส่งครบ</small>';
+      note.hidden = false;
+    } else {
+      toast(err.message, true);
+      note.className = 'saved-note bad'; note.textContent = '✕ ยังไม่ได้บันทึก: ' + err.message; note.hidden = false;
+    }
   }
   finally { btn.disabled = false; btn.textContent = label; }
 }
@@ -1448,8 +1606,8 @@ function syncPerBox(it){
   setErr('cnt-perbox', '');
   if (it && it.perBox > 0) {
     inp.value = it.perBox; inp.disabled = true;
-    btn.hidden = false; btn.textContent = 'แก้ไข';
-    note.textContent = 'ตั้งค่าไว้แล้ว กด "แก้ไข" ถ้าต้องการเปลี่ยน';
+    btn.hidden = !S.canApprove; btn.textContent = 'แก้ไข';
+    note.textContent = S.canApprove ? 'ตั้งค่าไว้แล้ว กด "แก้ไข" ถ้าต้องการเปลี่ยน' : 'ตั้งค่าไว้แล้ว ถ้าไม่ถูกต้องแจ้ง Supervisor ให้แก้ไข';
   } else {
     inp.value = ''; inp.disabled = false; btn.hidden = true;
     note.textContent = it ? 'สินค้านี้ยังไม่มีจำนวนต่อกล่อง กรุณาใส่ (ระบบจะจำไว้)' : '';
@@ -1522,7 +1680,9 @@ $('sale-code').addEventListener('change', () => {
   const it = S.items[$('sale-code').value.trim()];
   if (it && it.price) { $('sale-price').value = String(it.price).split(',').join(''); calcSale(); }
 });
-async function refreshToday(){
+let rtTimer = null;
+function refreshToday(){ clearTimeout(rtTimer); rtTimer = setTimeout(refreshTodayNow, 250); }
+async function refreshTodayNow(){
   try {
     if (!S.booth) { $('sale-today').textContent = '–'; return; }
     const r = await api('getSalesTotal', S.token, '', isoToThai(todayISO()), '', true, S.booth.id);
@@ -1854,6 +2014,116 @@ $('stk-print').onclick = () => {
 };
 window.addEventListener('afterprint', () => document.body.classList.remove('printing-stk'));
 
+
+
+/* ---------- คำขอปรับสต็อกรออนุมัติ ---------- */
+let pendBusy = false;
+async function loadPending(){
+  if (!S.booth || !S.token || pendBusy) return;
+  pendBusy = true;
+  try {
+    const r = await api('getPendingAdj', S.token, S.booth.id);
+    const box = $('adj-pend-box'), list = r.list || [];
+    $('adjBadge').hidden = !list.length; $('adjBadge').textContent = list.length;
+    box.hidden = !list.length;
+    $('adj-pend-title').textContent = 'รออนุมัติ ' + list.length + ' รายการ' + (r.canApprove ? '' : ' (รอ Supervisor)');
+    $('adj-pend').innerHTML = list.map(x =>
+      '<div class="pend" data-id="' + esc(x.id) + '"><b>' + esc(x.type) + ' ' + (x.qty > 0 ? '+' : '') + x.qty + '</b> · ' + esc(x.code) + ' ' + esc(x.desc) +
+      '<br><small>' + esc(x.by) + ' · ' + esc(x.at) + ' · ' + esc(x.shift) + (x.remark ? ' · ' + esc(x.remark) : '') + '</small>' +
+      (r.canApprove ? '<div class="acts"><button type="button" class="btn" data-ok="1">อนุมัติ</button>' +
+        '<button type="button" class="btn ghost" data-ok="0">ไม่อนุมัติ</button></div>' : '') + '</div>').join('');
+    $('adj-pend').querySelectorAll('[data-ok]').forEach(btn => btn.onclick = async () => {
+      const card = btn.closest('.pend'), ok = btn.dataset.ok === '1';
+      let reason = '';
+      if (!ok) { reason = (prompt('เหตุผลที่ไม่อนุมัติ') || '').trim(); if (!reason) return toast('ต้องใส่เหตุผลที่ไม่อนุมัติ', true); }
+      card.querySelectorAll('button').forEach(x => x.disabled = true);
+      try {
+        await api('decideAdjustment', S.token, { booth: S.booth.id, id: card.dataset.id, approve: ok, reason: reason });
+        toast(ok ? 'อนุมัติแล้ว ตัดสต็อกเรียบร้อย' : 'ไม่อนุมัติ บันทึกเหตุผลแล้ว');
+      } catch(e){ toast(e.message, true); }
+      pendBusy = false; loadPending();
+    });
+  } catch(e){ /* เงียบไว้ ไม่รบกวนการใช้งาน */ }
+  finally { pendBusy = false; }
+}
+
+/* ---------- จัดการบูธ (admin) ---------- */
+let BTH = [], bthEdit = null;
+function bthForm(b){
+  bthEdit = b ? b.id : null;
+  $('bth-title').textContent = b ? 'แก้ไขบูธ ' + b.id : 'เพิ่มบูธใหม่';
+  $('bth-id').value = b ? b.id : ''; $('bth-id').disabled = !!b;
+  $('bth-name').value = b ? b.name : ''; $('bth-zone').value = b ? b.zone : '';
+  $('bth-staff').value = b ? b.staff : ''; $('bth-sheet').value = b ? b.countSheet : '';
+  $('bth-active').checked = b ? b.active : true;
+}
+function renderBth(){
+  $('bth-rows').innerHTML = BTH.map((b, i) => '<tr><td>' + esc(b.id) + '</td><td>' + esc(b.name) + '</td><td>' + esc(b.zone || '') +
+    '</td><td>' + esc(b.staff || 'ทุกคน') + '</td><td>' + esc(b.countSheet) + '</td><td>' + (b.active ? '<span style="color:var(--green)">เปิด</span>' : '<span style="color:var(--red)">ปิด</span>') +
+    '</td><td><button type="button" class="btn ghost" data-bi="' + i + '" style="padding:4px 10px;min-height:0">แก้ไข</button></td></tr>').join('');
+  $('bth-rows').querySelectorAll('[data-bi]').forEach(x => x.onclick = () => { bthForm(BTH[+x.dataset.bi]); $('bth-name').focus(); });
+}
+$('bth-load').onclick = async () => {
+  const o = $('bth-out'); o.hidden = false; $('bth-rows').innerHTML = '<tr><td colspan="7" class="empty">กำลังโหลด…</td></tr>';
+  try { BTH = await api('adminListBooths', S.token); renderBth(); bthForm(null); }
+  catch(e){ $('bth-rows').innerHTML = '<tr><td colspan="7" class="empty">' + esc(e.message) + '</td></tr>'; }
+};
+$('bth-new').onclick = () => bthForm(null);
+$('bth-save').onclick = async () => {
+  const d = { isNew: !bthEdit, id: (bthEdit || $('bth-id').value).trim().toUpperCase(), name: $('bth-name').value.trim(),
+              zone: $('bth-zone').value.trim(), staff: $('bth-staff').value.trim(), countSheet: $('bth-sheet').value.trim(),
+              active: $('bth-active').checked };
+  if (!/^[A-Z0-9_-]{2,12}$/.test(d.id)) return toast('รหัสบูธใช้ A-Z 0-9 _ - ยาว 2-12 ตัว เช่น CTW01', true);
+  if (!d.name) return toast('ใส่ชื่อบูธ', true);
+  if (d.staff && !/^[\d,\s]+$/.test(d.staff)) return toast('รหัสพนักงานใส่ได้เฉพาะตัวเลข คั่นด้วย ,', true);
+  const btn = $('bth-save'); btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+  try { BTH = await api('adminSaveBooth', S.token, d); renderBth(); bthForm(null); toast('บันทึกบูธ ' + d.id + ' แล้ว'); loadBooths(); }
+  catch(e){ toast(e.message, true); }
+  finally { btn.disabled = false; btn.textContent = 'บันทึกบูธ'; }
+};
+
+/* ---------- สถานะระบบ (admin) ---------- */
+function msTxt(ms){ return ms >= 1000 ? (ms / 1000).toFixed(1) + ' วินาที' : ms + ' ms'; }
+$('sys-load').onclick = async () => {
+  const out = $('sys-out'); out.innerHTML = '<div class="empty">กำลังโหลด…</div>';
+  try {
+    const u = await api('getUsage', S.token);
+    const mine = (S.perf || []).filter(x => x.fn !== 'getUsage');
+    const avg = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0;
+    const rtt = avg(mine.map(x => x.rtt)), srv = avg(mine.map(x => x.srv));
+    const today = u.hours.slice(0, 12);
+    const busiest = u.hours.reduce((m, h) => h.n > (m ? m.n : 0) ? h : m, null);
+    let h = '<div class="stk-sum" style="margin-top:12px">' +
+      '<div><small>ออนไลน์ (15 นาที)</small><b>' + u.online15.length + '</b></div>' +
+      '<div><small>ใช้งานใน 1 ชม.</small><b>' + u.online60 + '</b></div>' +
+      '<div><small>login วันนี้</small><b>' + u.loginsToday + '</b></div>' +
+      '<div><small>ดีเลย์เครื่องนี้ (เฉลี่ย)</small><b style="font-size:1rem">' + (rtt ? msTxt(rtt) : '–') + '</b></div></div>';
+    h += '<p class="hint" style="margin-top:8px">ดีเลย์เครื่องนี้ ' + (rtt ? msTxt(rtt) : '–') + ' = เซิร์ฟเวอร์ประมวลผล ' + (srv ? msTxt(srv) : '–') +
+      ' + เครือข่าย ' + (rtt ? msTxt(Math.max(0, rtt - srv)) : '–') + ' (วัดจาก ' + mine.length + ' คำสั่งล่าสุด)</p>';
+    h += '<h3 style="margin:14px 0 6px;font-size:1rem">ผู้ใช้ล่าสุด</h3><div class="table-wrap" style="margin-top:0"><table><thead><tr><th>ชื่อ</th><th>บูธ</th><th>ล่าสุด</th><th>ทำอะไร</th></tr></thead><tbody>' +
+      (u.online.length ? u.online.map(o => '<tr><td>' + esc(o.name) + '</td><td>' + esc(o.booth || '–') + '</td><td>' +
+        (o.ago < 1 ? 'เมื่อสักครู่' : o.ago + ' นาที') + '</td><td>' + esc(o.fn) + '</td></tr>').join('')
+        : '<tr><td colspan="4" class="empty">ยังไม่มีข้อมูล</td></tr>') + '</tbody></table></div>';
+    h += '<h3 style="margin:14px 0 6px;font-size:1rem">เวลาประมวลผลฝั่งเซิร์ฟเวอร์ รายชั่วโมง</h3><div class="table-wrap" style="margin-top:0"><table><thead><tr><th>ชั่วโมง</th><th class="n">จำนวนคำสั่ง</th><th class="n">เฉลี่ย</th><th class="n">สูงสุด</th><th class="n">ผิดพลาด</th></tr></thead><tbody>' +
+      (today.length ? today.map(x => '<tr><td>' + x.hour + '</td><td class="n">' + x.n + '</td><td class="n">' + msTxt(x.avg) + '</td><td class="n">' +
+        msTxt(x.max) + '</td><td class="n">' + x.err + '</td></tr>').join('') : '<tr><td colspan="5" class="empty">ยังไม่มีข้อมูล</td></tr>') + '</tbody></table></div>';
+    h += '<h3 style="margin:14px 0 6px;font-size:1rem">คำสั่งที่ใช้เวลานานที่สุด (24 ชม.)</h3><div class="table-wrap" style="margin-top:0"><table><thead><tr><th>คำสั่ง</th><th class="n">ครั้ง</th><th class="n">เฉลี่ย</th><th class="n">สูงสุด</th></tr></thead><tbody>' +
+      u.slow.slice(0, 8).map(f => '<tr><td>' + esc(f.fn) + '</td><td class="n">' + f.n + '</td><td class="n">' + msTxt(f.avg) + '</td><td class="n">' + msTxt(f.max) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+    const ce = u.clientErrors || [];
+    h += '<h3 style="margin:14px 0 6px;font-size:1rem">ปัญหาที่เครื่องพนักงานเจอ (6 ชม.)</h3>' + (ce.length
+      ? '<div class="table-wrap" style="margin-top:0"><table><thead><tr><th>เวลา</th><th>ใคร</th><th>ชนิด</th><th>คำสั่ง</th><th>รายละเอียด</th></tr></thead><tbody>' +
+        ce.slice(0, 20).map(x => '<tr><td>' + esc(new Date(x.at).toLocaleTimeString('th-TH')) + '</td><td>' + esc(x.name) + '</td><td>' + esc(x.kind) +
+        '</td><td>' + esc(x.fn) + '</td><td>' + esc(x.detail) + '</td></tr>').join('') + '</tbody></table></div>' +
+        '<p class="hint">AUTH = ต้องรัน authorizeAll · LOGIN_PAGE = ตั้ง Deploy ให้ Anyone · BUSY = คนใช้พร้อมกันมาก · TEMP = Google สะดุดชั่วคราว (ระบบลองใหม่/เก็บในเครื่องให้แล้ว)</p>'
+      : '<p class="hint">ไม่มี</p>');
+    h += '<h3 style="margin:14px 0 6px;font-size:1rem">จำนวนแถวข้อมูล</h3><p class="hint">' +
+      Object.keys(u.sizes).map(k => esc(k) + ': ' + u.sizes[k].toLocaleString('th-TH')).join(' · ') + '</p>';
+    if (busiest) h += '<p class="hint">ชั่วโมงที่ใช้งานมากที่สุด: ' + busiest.hour + ' (' + busiest.n + ' คำสั่ง) · ขีดจำกัดของ Google: ประมวลผลพร้อมกันได้ ' + u.limits.concurrent + ' คำสั่ง</p>';
+    out.innerHTML = h;
+  } catch(e){ out.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+};
+
 /* ---------- ปรับสต็อก ---------- */
 $('tab-adj').onsubmit = e => {
   e.preventDefault();
@@ -1874,9 +2144,12 @@ $('tab-adj').onsubmit = e => {
   submitWith(e.target, 'saveAdjustment', {
     booth: S.booth.id, toBooth: $('adj-to').value,
     type: $('adj-type').value, shift: $('adj-shift').value, code: it.code, desc: it.desc,
-    qty: n('adj-qty'), approvedBy: $('adj-appr').value.trim(), remark: $('adj-remark').value.trim()
+    qty: n('adj-qty'), remark: $('adj-remark').value.trim()
   }, r => {
-    toast('บันทึกการปรับสต็อกแล้ว (' + (r.qty > 0 ? '+' : '') + r.qty + ')' + (r.to ? ' · โอนเข้าบูธ ' + r.to + ' แล้ว' : ''));
+    if (r.queued) toast('เก็บคำขอไว้ในเครื่อง จะส่งเมื่อมีสัญญาณ');
+    else if (r.pending) toast('ส่งคำขอแล้ว รอ Supervisor อนุมัติ (ยังไม่ตัดสต็อก)');
+    else toast('บันทึกการปรับสต็อกแล้ว (' + (r.qty > 0 ? '+' : '') + r.qty + ')' + (r.to ? ' · โอนเข้าบูธ ' + r.to + ' แล้ว' : ''));
+    loadPending();
     $('adj-to').value = '';
     ['adj-code','adj-qty','adj-remark'].forEach(id => $(id).value = '');
     $('adj-code-desc').textContent = ''; $('adj-code-desc').className = 'item-desc';
