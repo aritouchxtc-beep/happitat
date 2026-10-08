@@ -308,6 +308,7 @@
       <label for="apiUrl">ลิงก์เชื่อมต่อระบบ (ตั้งครั้งเดียว)</label>
       <input id="apiUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
     </div>
+    <div class="hint" id="lgThai" hidden style="color:#8a6100;margin:-8px 0 8px">รหัสผ่านมีตัวอักษรไทย แป้นพิมพ์อาจเป็นภาษาไทยอยู่ ให้สลับเป็นภาษาอังกฤษ</div>
     <div class="err" id="lgErr" role="alert"></div>
     <button class="btn" id="lgBtn" type="button">เข้าสู่ระบบ</button>
     <div class="foot">ST175 · Off-site shop / Pop-up shop</div>
@@ -725,9 +726,9 @@ const $ = id => document.getElementById(id);
 
 /* ---------- storage (กันพังถ้าเบราว์เซอร์บล็อก) ---------- */
 const store = {
-  get(){ try{ return sessionStorage.getItem('happitat_token'); }catch(e){ return null; } },
-  set(v){ try{ sessionStorage.setItem('happitat_token', v); }catch(e){} },
-  clear(){ try{ sessionStorage.removeItem('happitat_token'); }catch(e){} }
+  get(){ try{ return localStorage.getItem('happitat_token') || sessionStorage.getItem('happitat_token'); }catch(e){ return null; } },
+  set(v){ try{ localStorage.setItem('happitat_token', v); }catch(e){} },
+  clear(){ try{ localStorage.removeItem('happitat_token'); sessionStorage.removeItem('happitat_token'); }catch(e){} }
 };
 
 /* ---------- server call ----------
@@ -736,9 +737,8 @@ const store = {
 const API_URL = 'https://script.google.com/macros/s/AKfycbxlh4XxCk-NbjKXsUxlBgJ9ugDTfoPubCsK5Y5-EAyK_NoCw-tK_gTlG9o1LJZg5QdqVA/exec';
 // ถ้าเคยวางลิงก์ในหน้า login ไว้ จะใช้ลิงก์นั้นก่อน (ใช้แก้กรณีลิงก์ในไฟล์ผิด)
 function apiUrl(){
-  let saved = '';
-  try { saved = localStorage.getItem('happitat_api') || ''; } catch(e){}
-  return saved || API_URL;
+  if (API_URL) return API_URL;                       // ใช้ลิงก์ในไฟล์เสมอ (กันเครื่องที่เคยจำลิงก์เก่าไว้)
+  try { return localStorage.getItem('happitat_api') || ''; } catch(e){ return ''; }
 }
 function validApi(u){
   u = String(u || '').trim();
@@ -781,7 +781,7 @@ function api(fn, ...args){
       : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ (สัญญาณอาจไม่เสถียร) กดบันทึกอีกครั้ง ถ้ายังไม่ได้ให้แจ้งผู้ดูแล');
   })
   .then(r => r.json().catch(() => {
-    $('apiBox').hidden = false;
+    if (!API_URL) $('apiBox').hidden = false;
     throw new Error('ลิงก์เชื่อมต่อไม่ถูกต้อง หรือยังไม่ได้ Deploy เวอร์ชันใหม่');
   }))
   .then(j => { if (!j.ok) throw fail(j.error || 'เกิดข้อผิดพลาด'); return j.data; });
@@ -808,7 +808,7 @@ async function doLogin(){
   }
   $('lgErr').textContent = ''; $('lgBtn').disabled = true; $('lgBtn').textContent = 'กำลังตรวจสอบ…';
   try {
-    const r = await api('login', $('lgUser').value, $('lgPass').value);
+    const r = await api('login', $('lgUser').value.trim(), $('lgPass').value.trim());
     S.token = r.token; S.profile = r.profile; store.set(r.token);
     $('lgPass').value = '';
     if (r.profile.mustChange) showPwChange(true); else await enterApp();
@@ -819,9 +819,15 @@ async function doLogin(){
   }
 }
 $('lgBtn').addEventListener('click', doLogin);
+const hasThai = v => /[\u0E00-\u0E7F]/.test(v);
+$('lgPass').addEventListener('input', () => { $('lgThai').hidden = !hasThai($('lgPass').value); });
+['pwNew','pwNew2','pwCur'].forEach(id => $(id) && $(id).addEventListener('input', () => {
+  $('pwErr').textContent = hasThai($(id).value) ? 'มีตัวอักษรไทย แป้นพิมพ์อาจเป็นภาษาไทยอยู่ ให้สลับเป็นภาษาอังกฤษ' : '';
+}));
 if (!IN_GAS) {
   if (!validApi(apiUrl())) $('apiBox').hidden = false;
-  else $('apiEdit').hidden = false;
+  else if (!API_URL) $('apiEdit').hidden = false;
+  if (API_URL) { try { localStorage.removeItem('happitat_api'); } catch(e){} }
   $('apiEdit').onclick = () => { $('apiUrl').value = apiUrl(); $('apiBox').hidden = false; $('apiEdit').hidden = true; };
 }
 $('apiUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
