@@ -190,6 +190,14 @@
   .pull-note button{margin:4px 6px 0 0;border:1.5px solid var(--shelf);background:#fff;color:var(--shelf);border-radius:999px;padding:3px 10px;font-weight:600;cursor:pointer;font-size:.82rem}
   .saved-note{margin-top:10px;padding:10px 12px;border-radius:var(--radius-s);background:#EAF4EE;border-left:4px solid var(--shelf);font-size:.9rem}
   .saved-note small{color:var(--muted)}
+  .bill-add{border:1px dashed var(--line);border-radius:12px;padding:12px;margin:6px 0 14px;background:#FAFBFA}
+  .bill-add-h,.bill-list-h{font-weight:700;margin-bottom:8px}
+  .bill-del{border:0;background:none;font-size:1.2rem;cursor:pointer;color:var(--muted);padding:4px 8px}
+  .photos{display:flex;gap:8px;flex-wrap:wrap}
+  .photos .ph{width:84px;height:84px;border-radius:10px;position:relative;overflow:hidden;background:#e9ece8}
+  .photos .ph img{width:100%;height:100%;object-fit:cover}
+  .photos .ph button{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;line-height:24px;padding:0}
+  .photos .ph-add{width:84px;height:84px;border-radius:10px;border:2px dashed var(--line);background:none;color:var(--shelf);font-weight:700;cursor:pointer;font-family:inherit}
   .saved-note.queued{background:#FFF6E2;border-left-color:var(--amber)}
   .saved-note.bad{background:#FBEDEA;border-left-color:var(--red);color:var(--red)}
   #stk-table td.n,#stk-table th.n{text-align:right}
@@ -440,8 +448,13 @@
           <small class="hint" id="cnt-total-note">ระบบคำนวณ = ลัง × MU ต่อลัง + ชิ้นแยกไม่เต็มลัง</small></div>
       </div>
       <div class="field">
-        <label for="cnt-img">รูปถ่ายประกอบ (ไม่บังคับ)</label>
-        <input id="cnt-img" type="file" accept="image/*" capture="environment">
+        <label>รูปถ่ายประกอบ (ไม่บังคับ)</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button type="button" class="btn ghost" id="cnt-snap">ถ่ายรูป</button>
+          <span style="color:var(--muted);font-size:.85rem" id="cnt-snap-note">ยังไม่มีรูป</span>
+          <button type="button" class="linkbtn" id="cnt-snap-del" hidden>ลบรูป</button>
+        </div>
+        <input id="cnt-img" type="file" accept="image/*" capture="environment" class="hidden">
         <img id="cnt-preview" class="thumb hidden" alt="ตัวอย่างรูป">
       </div>
       <button class="btn" type="submit">บันทึกยอดนับ</button>
@@ -467,10 +480,9 @@
       <div class="row">
         <div class="field"><label for="sh-open" class="req">ยอดยกมา (Opening)</label>
           <input id="sh-open" type="number" min="0" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-open-err"></div>
-          <button type="button" class="linkbtn" id="sh-fill">ดึงยอดนับจริงกะก่อน</button></div>
-        <div class="field"><label for="sh-restock" class="req">รับเติมระหว่างกะ</label><input id="sh-restock" type="number" min="0" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-restock-err"></div></div>
+          <div class="pull-note" id="sh-open-note" hidden></div></div>
+        <div class="field"><label for="sh-restock" class="req">รับเติมระหว่างกะ</label><input id="sh-restock" type="number" min="0" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-restock-err"></div><div class="pull-note" id="sh-restock-note" hidden></div></div>
         <div class="field"><label for="sh-sales" class="req">ขายออก</label><input id="sh-sales" type="number" min="0" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-sales-err"></div>
-          <button type="button" class="linkbtn" id="sh-pullsales">ดึงยอดขายจากแคชเชียร์</button>
           <div class="pull-note" id="sh-sales-note" hidden></div></div>
         <div class="field"><label for="sh-actual" class="req">นับได้จริง</label><input id="sh-actual" type="number" min="0" step="1" inputmode="numeric"><div class="field-err" id="sh-actual-err"></div></div>
       </div>
@@ -642,42 +654,46 @@
 
     <!-- ขายออก (เฉพาะแผนก Cashier) -->
     <form class="panel hidden" id="tab-sale" action="javascript:void(0)">
-      <h2>บันทึกการขาย</h2>
-      <p class="sub">บันทึกลงชีต inventory_cashier</p>
+      <h2>บันทึกการขาย (บิล)</h2>
+      <p class="sub">1 บิลมีได้หลายรายการ · บันทึกลงชีต inventory_cashier ครั้งเดียว</p>
       <div class="row">
         <div class="field"><label for="sale-shift">กะ</label><select id="sale-shift" class="shift-select"></select></div>
         <div class="field"><label for="sale-pay">ชำระโดย</label>
           <select id="sale-pay"><option>เงินสด</option><option>โอน / QR</option><option>บัตรเครดิต</option><option>อื่นๆ</option></select></div>
       </div>
-      <div class="field">
-        <label for="sale-code" class="req">สินค้า</label>
-        <div class="picker">
-          <input id="sale-code" list="itemList" placeholder="พิมพ์รหัสหรือชื่อสินค้า" autocomplete="off">
-          <button type="button" class="btn ghost" data-scan="sale-code">สแกน</button>
+      <div class="bill-add">
+        <div class="bill-add-h">➕ เพิ่มสินค้าในบิล</div>
+        <div class="field">
+          <label for="sale-code" class="req">สินค้า</label>
+          <div class="picker">
+            <input id="sale-code" list="itemList" placeholder="พิมพ์รหัสหรือชื่อสินค้า" autocomplete="off">
+            <button type="button" class="btn ghost" data-scan="sale-code">สแกน</button>
+          </div>
+          <div class="item-desc" id="sale-code-desc"></div>
         </div>
-        <div class="item-desc" id="sale-code-desc"></div>
+        <div class="row">
+          <div class="field"><label for="sale-qty" class="req">จำนวน</label><input id="sale-qty" type="number" min="1" step="1" inputmode="numeric" placeholder="0">
+            <div class="field-err" id="sale-qty-err"></div></div>
+          <div class="field"><label for="sale-price" class="req">ราคาต่อหน่วย (บาท)</label><input id="sale-price" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00">
+            <div class="field-err" id="sale-price-err"></div></div>
+        </div>
+        <button type="button" class="btn ghost" id="sale-add" style="width:100%">+ เพิ่มลงบิล</button>
       </div>
-      <div class="row">
-        <div class="field"><label for="sale-qty" class="req">จำนวน</label><input id="sale-qty" type="number" min="1" step="1" inputmode="numeric" placeholder="0">
-          <div class="field-err" id="sale-qty-err"></div></div>
-        <div class="field"><label for="sale-price" class="req">ราคาต่อหน่วย (บาท)</label><input id="sale-price" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00">
-          <div class="field-err" id="sale-price-err"></div></div>
-      </div>
-      <div class="calc">
-        <div><small>ยอดเงิน</small><b id="sale-amount">0</b></div>
+      <div class="bill-list-h">รายการในบิล (<span id="bill-n">0</span>)</div>
+      <div class="table-wrap" style="margin-top:0"><table><thead><tr><th>สินค้า</th><th class="n">จำนวน</th><th class="n">เงิน</th><th></th></tr></thead>
+        <tbody id="bill-rows"><tr><td colspan="4" class="empty">ยังไม่มีสินค้าในบิล</td></tr></tbody></table></div>
+      <div class="calc" style="margin-top:10px">
+        <div><small>รวมทั้งบิล</small><b id="sale-amount">0 ฿</b></div>
         <div><small>ขายวันนี้ (ของฉัน)</small><b id="sale-today">–</b></div>
       </div>
-      <div class="field">
-        <label>รูปใบเสร็จ (ถ้ามี)</label>
-        <div class="photo-row">
-          <button type="button" class="btn ghost" id="sale-snap">ถ่ายรูปใบเสร็จ</button>
-          <span style="color:var(--muted);font-size:.85rem" id="sale-snap-note">ยังไม่มีรูป</span>
-        </div>
+      <div class="field" style="margin-top:12px">
+        <label>รูปใบเสร็จ (ถ้ามี) · สูงสุด 3 รูป</label>
+        <div class="photos" id="sale-photos"></div>
         <input type="file" id="sale-receipt" accept="image/*" capture="environment" class="hidden">
-        <div class="receipt-thumb hidden" id="sale-thumb"><img id="sale-receipt-img" alt="รูปใบเสร็จ"><button type="button" id="sale-receipt-del" aria-label="ลบรูป">×</button></div>
+        <small class="hint">แต่ละรูปย่อเหลือไม่เกิน 50 KB อัตโนมัติ</small>
       </div>
       <div class="field"><label for="sale-remark">หมายเหตุ</label><input id="sale-remark" placeholder="เช่น เลขที่ใบเสร็จ"></div>
-      <button class="btn" type="submit">บันทึกการขาย</button>
+      <button class="btn" type="submit" id="sale-submit">บันทึกบิล</button>
     </form>
 
     <!-- ประวัติ -->
@@ -1238,6 +1254,7 @@ function applyScan(text){
   box.scrollIntoView({ block: 'center', behavior: 'smooth' });
   const next = { 'cnt-code': $('cnt-perbox').disabled ? 'cnt-box' : 'cnt-perbox', 'sale-code': 'sale-qty', 'sh-code': 'sh-actual', 'adj-code': 'adj-qty' }[S.scanTarget];
   if (it && next) setTimeout(() => $(next).focus(), 350);   // ไปช่องใส่จำนวนต่อทันที
+  if (it && S.scanTarget === 'sh-code') shPrefillSoon();
   if (!it) toast('อ่านได้รหัส ' + code + ' แต่ไม่พบในรายการสินค้า', true);
 }
 
@@ -1537,10 +1554,19 @@ $('cnt-img').onchange = async e => {
   if (!f) return $('cnt-preview').classList.add('hidden');
   try { S.img = await compressImage(f, 1024, false); $('cnt-preview').src = S.img; $('cnt-preview').classList.remove('hidden'); toast('แนบรูปแล้ว (' + kb(S.img) + ')'); }
   catch(err){ toast(err.message, true); }
+  cntSnapUi();
 };
+function cntSnapUi(){
+  $('cnt-snap').textContent = S.img ? 'ถ่ายใหม่' : 'ถ่ายรูป';
+  $('cnt-snap-note').textContent = S.img ? 'แนบรูปแล้ว (' + kb(S.img) + ')' : 'ยังไม่มีรูป';
+  $('cnt-snap-del').hidden = !S.img;
+  if (!S.img) $('cnt-preview').classList.add('hidden');
+}
+$('cnt-snap').onclick = () => { $('cnt-img').value = ''; $('cnt-img').click(); };
+$('cnt-snap-del').onclick = () => { S.img = null; $('cnt-img').value = ''; cntSnapUi(); };
 
 /* ---------- คิวออฟไลน์: ไม่มีสัญญาณ = เก็บในเครื่อง แล้วส่งเองเมื่อสัญญาณกลับมา ---------- */
-const QUEUE_FNS = ['saveCount', 'saveSale', 'saveShift', 'saveAdjustment'];
+const QUEUE_FNS = ['saveCount', 'saveSale', 'saveSaleBill', 'saveShift', 'saveAdjustment'];
 const QKEY = 'happitat_queue';
 const qGet = () => { try { return JSON.parse(localStorage.getItem(QKEY) || '[]'); } catch(e){ return []; } };
 const qSet = q => { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch(e){ toast('หน่วยความจำเครื่องเต็ม บันทึกออฟไลน์ไม่ได้', true); } updateQBadge(); };
@@ -1549,7 +1575,7 @@ function updateQBadge(){
   const q = qGet(), b = $('qBadge'); if (!b) return;
   b.hidden = !q.length; b.textContent = 'รอส่ง ' + q.length;
 }
-const Q_LABEL = { saveCount: 'นับสต็อก', saveSale: 'ขายออก', saveShift: 'สรุปกะ', saveAdjustment: 'ปรับสต็อก' };
+const Q_LABEL = { saveCount: 'นับสต็อก', saveSale: 'ขายออก', saveSaleBill: 'บิลขาย', saveShift: 'สรุปกะ', saveAdjustment: 'ปรับสต็อก' };
 let flushing = false;
 async function flushQueue(manual){
   if (flushing || !S.token) return;
@@ -1600,7 +1626,8 @@ async function submitWith(form, fn, payload, onDone){
       const q = qGet(); q.push({ fn: fn, payload: payload, user: S.profile && S.profile.user, booth: S.booth && S.booth.id }); qSet(q);
       const p = payload;
       onDone({ id: 'รอส่ง', queued: true, total: (p.perBox * p.boxQty) + (Number(p.loose) || 0), perBox: p.perBox,
-               qty: p.qty, amount: (p.qty || 0) * (p.price || 0), diff: 0, to: '' });
+               qty: p.qty, amount: p.items ? p.items.reduce((a, x) => a + x.qty * x.price, 0) : (p.qty || 0) * (p.price || 0),
+               lines: p.items ? p.items.length : 0, diff: 0, to: '' });
       toast('บันทึกไว้ในเครื่องแล้ว จะส่งให้อัตโนมัติ' + (err.fatal ? ' (แจ้งผู้ดูแล: ' + err.message + ')' : ''));
       note.className = 'saved-note queued';
       note.innerHTML = '⏳ เก็บไว้ในเครื่องแล้ว (รอส่ง ' + q.length + ' รายการ)<br><small>ระบบจะส่งเองเมื่อมีสัญญาณ ห้ามล้างข้อมูลเบราว์เซอร์หรือออกจากระบบจนกว่าจะส่งครบ</small>';
@@ -1667,7 +1694,7 @@ $('tab-count').onsubmit = e => {
   }, r => {
     it.perBox = r.perBox;                                  // จำค่าไว้ในเครื่อง ครั้งหน้าจะล็อกให้
     toast('บันทึกยอดนับแล้ว · ' + S.booth.name + ' · รวม ' + r.total + ' ชิ้น');
-    ['cnt-code','cnt-box','cnt-img'].forEach(id => $(id).value = '');
+    ['cnt-code','cnt-box','cnt-img'].forEach(id => $(id).value = ''); S.img = null; cntSnapUi();
     $('cnt-loose').value = ''; $('cnt-code-desc').textContent = ''; $('cnt-code-desc').className = 'item-desc';
     pbItem = undefined; syncPerBox(null);
     $('cnt-preview').classList.add('hidden'); S.img = null; $('cnt-code').focus();
@@ -1687,16 +1714,46 @@ function calcShift(){
 ['sh-open','sh-restock','sh-sales','sh-actual'].forEach(id => $(id).addEventListener('input', calcShift));
 
 /* ---------- ขายออก ---------- */
-function calcSale(){
-  const amt = n('sale-qty') * n('sale-price');
-  $('sale-amount').textContent = amt.toLocaleString('th-TH', { maximumFractionDigits: 2 });
+/* ---------- บิลขาย ---------- */
+let BILL = [];
+const fmtB = v => Number(v || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+function billTotal(){ return BILL.reduce((a, x) => a + x.qty * x.price, 0); }
+function renderBill(){
+  $('bill-n').textContent = BILL.length;
+  $('bill-rows').innerHTML = BILL.length ? BILL.map((x, i) =>
+    '<tr><td>' + esc(x.desc) + '<br><small style="color:var(--muted)">' + esc(x.code) + ' · @' + fmtB(x.price) + '</small></td>' +
+    '<td class="n">' + x.qty + '</td><td class="n">' + fmtB(x.qty * x.price) + '</td>' +
+    '<td><button type="button" class="bill-del" data-i="' + i + '" aria-label="ลบ">×</button></td></tr>').join('')
+    : '<tr><td colspan="4" class="empty">ยังไม่มีสินค้าในบิล</td></tr>';
+  $('bill-rows').querySelectorAll('[data-i]').forEach(b => b.onclick = () => { BILL.splice(+b.dataset.i, 1); renderBill(); });
+  const pcs = BILL.reduce((a, x) => a + x.qty, 0);
+  $('sale-amount').textContent = fmtB(billTotal()) + ' ฿';
+  $('sale-submit').textContent = BILL.length ? 'บันทึกบิล (' + BILL.length + ' รายการ · ' + pcs + ' ชิ้น · ' + fmtB(billTotal()) + ' ฿)' : 'บันทึกบิล';
 }
-['sale-qty','sale-price'].forEach(id => $(id).addEventListener('input', calcSale));
+function calcSale(){}
 $('sale-shift').addEventListener('change', () => setMyShift($('sale-shift').value, true));
 $('sale-code').addEventListener('change', () => {
   const it = S.items[$('sale-code').value.trim()];
-  if (it && it.price) { $('sale-price').value = String(it.price).split(',').join(''); calcSale(); }
+  if (it && it.price) $('sale-price').value = String(it.price).split(',').join('');
 });
+function addToBill(){
+  const it = resolveItem('sale-code');
+  const okFields = checkSaleFields();
+  if (!it) { $('sale-code').classList.add('invalid'); $('sale-code').focus(); toast('เลือกสินค้าจากรายการก่อน', true); return false; }
+  $('sale-code').classList.remove('invalid');
+  if (!okFields) { (document.querySelector('#tab-sale input.invalid') || $('sale-qty')).focus(); toast('กรอกจำนวนและราคาต่อหน่วยให้ถูกต้อง', true); return false; }
+  if (BILL.length >= 30) { toast('1 บิลมีได้ไม่เกิน 30 รายการ', true); return false; }
+  const q = n('sale-qty'), p = n('sale-price');
+  const same = BILL.find(x => x.code === it.code && x.price === p);
+  if (same) same.qty += q; else BILL.push({ code: it.code, desc: it.desc, qty: q, price: p });
+  $('sale-code').value = ''; $('sale-code-desc').textContent = ''; $('sale-code-desc').className = 'item-desc';
+  $('sale-qty').value = ''; $('sale-price').value = '';
+  renderBill(); toast('เพิ่มลงบิล: ' + it.desc + ' x' + q);
+  $('sale-code').focus();
+  return true;
+}
+$('sale-add').onclick = addToBill;
+['sale-qty', 'sale-price'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addToBill(); } }));
 let rtTimer = null;
 function refreshToday(){ clearTimeout(rtTimer); rtTimer = setTimeout(refreshTodayNow, 250); }
 async function refreshTodayNow(){
@@ -1707,21 +1764,20 @@ async function refreshTodayNow(){
   } catch(e){ $('sale-today').textContent = '–'; }
 }
 /* ใบเสร็จ */
-let saleReceipt = null;
-function setReceipt(dataUrl){
-  saleReceipt = dataUrl;
-  $('sale-thumb').classList.toggle('hidden', !dataUrl);
-  if (dataUrl) $('sale-receipt-img').src = dataUrl;
-  $('sale-snap').textContent = dataUrl ? 'ถ่ายใหม่' : 'ถ่ายรูปใบเสร็จ';
-  $('sale-snap-note').textContent = dataUrl ? 'แนบรูปแล้ว (' + kb(dataUrl) + ')' : 'ยังไม่มีรูป';
+let PHOTOS = [];
+function renderPhotos(){
+  $('sale-photos').innerHTML = PHOTOS.map((d, i) => '<div class="ph"><img src="' + d + '" alt="ใบเสร็จ ' + (i + 1) + '"><button type="button" data-p="' + i + '" aria-label="ลบรูป">×</button></div>').join('') +
+    (PHOTOS.length < 3 ? '<button type="button" class="ph-add" id="sale-snap">📷<br>ถ่ายรูป' + (PHOTOS.length ? ' (' + (PHOTOS.length + 1) + '/3)' : '') + '</button>' : '');
+  $('sale-photos').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { PHOTOS.splice(+b.dataset.p, 1); renderPhotos(); });
+  const sn = $('sale-snap'); if (sn) sn.onclick = () => { $('sale-receipt').value = ''; $('sale-receipt').click(); };
 }
-$('sale-snap').onclick = () => { $('sale-receipt').value = ''; $('sale-receipt').click(); };
 $('sale-receipt').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  try { setReceipt(await compressImage(f, 1400, true)); }   // ใบเสร็จ: ขาวดำ คงความละเอียดไว้ให้อ่านตัวเลขออก
+  const f = e.target.files[0]; if (!f || PHOTOS.length >= 3) return;
+  try { PHOTOS.push(await compressImage(f, 1400, true)); renderPhotos(); toast('แนบรูปที่ ' + PHOTOS.length + ' แล้ว'); }   // ใบเสร็จ: ขาวดำ อ่านตัวเลขออก
   catch(err){ toast(err.message, true); }
 };
-$('sale-receipt-del').onclick = () => setReceipt(null);
+function setReceipt(){ PHOTOS = []; renderPhotos(); }
+renderPhotos(); renderBill();
 
 /* ช่องบังคับ: จำนวน + ราคาต่อหน่วย */
 function fieldErr(id, msg){
@@ -1742,69 +1798,77 @@ function checkSaleFields(){
 
 $('tab-sale').onsubmit = e => {
   e.preventDefault();
-  const it = resolveItem('sale-code');
-  const okFields = checkSaleFields();
-  if (!it) { $('sale-code').classList.add('invalid'); $('sale-code').focus(); return toast('เลือกสินค้าจากรายการก่อน', true); }
-  $('sale-code').classList.remove('invalid');
-  if (!okFields) { (document.querySelector('#tab-sale input.invalid') || $('sale-qty')).focus(); return toast('กรอกจำนวนและราคาต่อหน่วยให้ถูกต้อง', true); }
+  // ใส่สินค้าไว้ในช่องแต่ยังไม่กดเพิ่ม: เพิ่มให้เองก่อนบันทึก
+  if ($('sale-code').value.trim() && !addToBill()) return;
+  if (!BILL.length) { $('sale-code').focus(); return toast('ยังไม่มีสินค้าในบิล ใส่สินค้าแล้วกด "+ เพิ่มลงบิล"', true); }
   if (!needBooth()) return;
-  submitWith(e.target, 'saveSale', {
-    booth: S.booth.id, shift: $('sale-shift').value, code: it.code, desc: it.desc, qty: n('sale-qty'), price: n('sale-price'),
-    payment: $('sale-pay').value, remark: $('sale-remark').value.trim(), receiptData: saleReceipt
+  submitWith(e.target, 'saveSaleBill', {
+    booth: S.booth.id, shift: $('sale-shift').value, payment: $('sale-pay').value, remark: $('sale-remark').value.trim(),
+    items: BILL.map(x => ({ code: x.code, desc: x.desc, qty: x.qty, price: x.price })), receipts: PHOTOS.slice()
   }, r => {
-    toast('บันทึกการขายแล้ว · ' + it.desc + ' x' + r.qty);
-    $('sale-code').value = ''; $('sale-code-desc').textContent = ''; $('sale-code-desc').className = 'item-desc';
-    $('sale-qty').value = ''; $('sale-price').value = ''; $('sale-remark').value = ''; calcSale();
-    setReceipt(null); refreshToday(); $('sale-code').focus();
+    toast(r.queued ? 'เก็บบิลไว้ในเครื่อง จะส่งให้อัตโนมัติ' : 'บันทึกบิลแล้ว · ' + r.lines + ' รายการ · ' + fmtB(r.amount) + ' ฿');
+    BILL = []; renderBill(); setReceipt(); $('sale-remark').value = '';
+    refreshToday(); $('sale-code').focus();
   });
 };
 
 function salesNote(html, warn){
   const n = $('sh-sales-note'); n.innerHTML = html; n.className = 'pull-note' + (warn ? ' warn' : ''); n.hidden = !html;
 }
-$('sh-pullsales').onclick = async () => {
-  const it = resolveItem('sh-code'); if (!it) return toast('เลือกสินค้าก่อน', true);
-  if (!needBooth()) return;
+/* ใส่รหัสสินค้า (หรือเปลี่ยนวันที่/กะ) แล้วดึง ยอดยกมา / รับเติม / ขายออก ให้เองในคำสั่งเดียว */
+let pfSeq = 0, pfTimer = null, pfKey = '';
+function shPrefillSoon(force){ clearTimeout(pfTimer); pfTimer = setTimeout(() => shPrefill(force), 250); }
+async function shPrefill(force){
+  const it = S.items[$('sh-code').value.trim()] || null;
   const date = isoToThai($('sh-date').value), shift = $('sh-shift').value;
-  const btn = $('sh-pullsales'); btn.textContent = 'กำลังดึงยอดขาย…';
+  if (!it || !S.booth || !date || !shift) return;
+  const key = [it.code, date, shift, S.booth.id].join('|');
+  if (key === pfKey && !force) return;
+  pfKey = key;
+  const my = ++pfSeq, f = ['sh-open', 'sh-restock', 'sh-sales'];
+  f.forEach(id => { $(id).disabled = true; $(id).value = ''; $(id).placeholder = 'กำลังดึง…'; });
+  ['sh-open-note', 'sh-restock-note'].forEach(id => $(id).hidden = true); salesNote('');
+  const t0 = performance.now();
   try {
-    const r = await api('getSalesTotal', S.token, it.code, date, shift, false, S.booth.id);
-    $('sh-sales').value = r.qty; calcShift();
-    if (r.qty > 0) { salesNote('ดึงแล้ว: ' + esc(shift) + ' วันที่ ' + date + ' ขาย <b>' + r.qty + ' ชิ้น</b>'); return; }
-    // ไม่เจอในกะนี้ บอกว่ายอดขายไปอยู่ที่ไหน
+    const r = await api('getShiftPrefill', S.token, it.code, date, shift, S.booth.id);
+    if (my !== pfSeq) return;                                   // เปลี่ยนสินค้าไปแล้ว ไม่ใช้ผลเก่า
+    $('sh-open').value = r.opening; $('sh-restock').value = r.restock; $('sh-sales').value = r.sales;
+    const on = $('sh-open-note'); on.textContent = 'จาก' + r.openingFrom; on.className = 'pull-note'; on.hidden = false;
+    const rb = Object.keys(r.restockBy || {});
+    const rn = $('sh-restock-note'); rn.textContent = rb.length ? rb.map(k => k + ' ' + r.restockBy[k]).join(' + ') : 'ไม่มีรับเข้า/โอนเข้าในกะนี้';
+    rn.className = 'pull-note'; rn.hidden = false;
+    let h = 'จากแคชเชียร์ ' + esc(shift) + ' ' + date + ' = <b>' + r.sales + ' ชิ้น</b>', warn = false;
     const others = Object.keys(r.byShift || {}).filter(k => k !== shift && r.byShift[k] > 0);
-    let h = '<b>' + esc(shift) + '</b> วันที่ ' + date + ' ยังไม่มียอดขายสินค้านี้ในบูธ ' + esc(S.booth.name);
-    if (others.length) {
-      h += '<br>แต่พบยอดขายวันนี้ในกะอื่น กดเพื่อใช้กะนั้น:<br>' +
+    if (!r.sales && others.length) {
+      warn = true;
+      h += '<br>พบยอดขายวันนี้ในกะอื่น กดเพื่อใช้กะนั้น:<br>' +
         others.map(k => '<button type="button" data-shift="' + esc(k) + '">' + esc(k) + ' · ' + r.byShift[k] + ' ชิ้น</button>').join('');
     }
-    if ((r.otherBooths || []).length) {
-      h += '<br>พบยอดขายวันนี้ในบูธอื่น: ' + r.otherBooths.map(b => esc(b.name) + ' ' + b.qty + ' ชิ้น').join(', ') +
-        ' (ตรวจว่าตอนขายเลือกบูธถูกหรือไม่)';
+    if (!r.sales && (r.otherBooths || []).length) {
+      warn = true; h += '<br>พบยอดขายในบูธอื่น: ' + r.otherBooths.map(b => esc(b.name) + ' ' + b.qty + ' ชิ้น').join(', ');
     }
-    if (!others.length && !(r.otherBooths || []).length) h += '<br>ตรวจวันที่ หรือดูรายการในแท็บประวัติ → ขายออก';
-    salesNote(h, true);
+    h += ' <small style="color:var(--muted)">· ' + ((performance.now() - t0) / 1000).toFixed(1) + ' วิ</small>';
+    salesNote(h, warn);
     $('sh-sales-note').querySelectorAll('button[data-shift]').forEach(b => b.onclick = () => {
-      const opt = [...$('sh-shift').options].find(o => o.value === b.dataset.shift);
-      if (!opt) $('sh-shift').insertAdjacentHTML('beforeend', '<option>' + esc(b.dataset.shift) + '</option>');
-      $('sh-shift').value = b.dataset.shift;
-      $('sh-pullsales').click();
+      if (![...$('sh-shift').options].some(o => o.value === b.dataset.shift))
+        $('sh-shift').insertAdjacentHTML('beforeend', '<option>' + esc(b.dataset.shift) + '</option>');
+      $('sh-shift').value = b.dataset.shift; shPrefillSoon(true);
     });
-  } catch(e){ salesNote(esc(e.message), true); toast(e.message, true); }
-  finally { btn.textContent = 'ดึงยอดขายจากแคชเชียร์'; }
-};
-['sh-code','sh-date','sh-shift'].forEach(id => $(id).addEventListener('change', () => salesNote('')));
-
-$('sh-fill').onclick = async () => {
-  const it = resolveItem('sh-code'); if (!it) return toast('เลือกสินค้าก่อน', true);
-  try {
-    if (!needBooth()) return;
-    const r = await api('getLastActual', S.token, it.code, S.booth.id);
-    if (!r) return toast('ยังไม่มีสรุปกะก่อนหน้าของสินค้านี้', true);
-    $('sh-open').value = r.qty; calcShift();
-    toast('ยกยอดจาก ' + r.date + ' ' + r.shift + ' = ' + r.qty);
-  } catch(e){ toast(e.message, true); }
-};
+  } catch(e){
+    if (my !== pfSeq) return;
+    pfKey = '';
+    [['sh-open', 0], ['sh-restock', 0], ['sh-sales', 0]].forEach(x => $(x[0]).value = x[1]);
+    salesNote('ดึงข้อมูลอัตโนมัติไม่ได้: ' + esc(e.message) + ' · กรอกเองได้ หรือ <button type="button" id="sh-retry">ลองอีกครั้ง</button>', true);
+    const rt = $('sh-retry'); if (rt) rt.onclick = () => shPrefillSoon(true);
+  } finally {
+    if (my === pfSeq) f.forEach(id => { $(id).disabled = false; $(id).placeholder = ''; });
+    calcShift();
+  }
+}
+$('sh-code').addEventListener('change', () => shPrefillSoon());
+$('sh-code').addEventListener('blur', () => shPrefillSoon());
+$('sh-code').addEventListener('input', () => { if (S.items[$('sh-code').value.trim()]) shPrefillSoon(); });
+['sh-date', 'sh-shift'].forEach(id => $(id).addEventListener('change', () => shPrefillSoon()));
 
 $('tab-shift').onsubmit = e => {
   e.preventDefault();
@@ -1831,6 +1895,7 @@ $('tab-shift').onsubmit = e => {
     ['sh-code','sh-actual','sh-remark'].forEach(id => $(id).value = '');
     ['sh-open','sh-restock','sh-sales'].forEach(id => $(id).value = 0);
     $('sh-code-desc').textContent = ''; $('sh-code-desc').className = 'item-desc'; calcShift();
+    pfKey = ''; ['sh-open-note', 'sh-restock-note'].forEach(id => $(id).hidden = true); salesNote('');
   });
 };
 
