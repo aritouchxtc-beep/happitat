@@ -416,23 +416,23 @@
         <small class="hint" id="cnt-last"></small>
       </div>
       <div class="row">
-        <div class="field"><label for="cnt-perbox" class="req">จำนวนต่อกล่อง (Qty per Box)</label>
+        <div class="field"><label for="cnt-perbox" class="req">จำนวน MU ต่อลัง (MU per Carton)</label>
           <div class="lockable">
-            <input id="cnt-perbox" type="number" min="1" step="1" inputmode="numeric" placeholder="ชิ้น / กล่อง">
+            <input id="cnt-perbox" type="number" min="1" step="1" inputmode="numeric" placeholder="MU / ลัง">
             <button type="button" class="btn ghost" id="cnt-perbox-edit" hidden>แก้ไข</button>
           </div>
           <div class="field-err" id="cnt-perbox-err"></div>
           <small class="hint" id="cnt-perbox-note"></small></div>
-        <div class="field"><label for="cnt-box" class="req">จำนวนกล่อง (Box Qty)</label>
+        <div class="field"><label for="cnt-box" class="req">จำนวนลัง (Carton Qty)</label>
           <input id="cnt-box" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
           <div class="field-err" id="cnt-box-err"></div></div>
-        <div class="field"><label for="cnt-loose">ชิ้นแยก (Loose Qty)</label>
+        <div class="field"><label for="cnt-loose">ชิ้นแยกไม่เต็มลัง (Loose Qty)</label>
           <input id="cnt-loose" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
-          <small class="hint">ไม่บังคับ ถ้าไม่มีชิ้นแยก เว้นว่างได้</small>
+          <small class="hint">ไม่บังคับ ถ้าไม่มีชิ้นแยกไม่เต็มลัง เว้นว่างได้</small>
           <div class="field-err" id="cnt-loose-err"></div></div>
         <div class="field"><label>จำนวนรวม (Total Qty)</label>
           <div class="total-box"><b id="cnt-total">0</b></div>
-          <small class="hint" id="cnt-total-note">ระบบคำนวณ = กล่อง × ชิ้นต่อกล่อง + ชิ้นแยก</small></div>
+          <small class="hint" id="cnt-total-note">ระบบคำนวณ = ลัง × MU ต่อลัง + ชิ้นแยกไม่เต็มลัง</small></div>
       </div>
       <div class="field">
         <label for="cnt-img">รูปถ่ายประกอบ (ไม่บังคับ)</label>
@@ -853,16 +853,19 @@ function serverHiccup(status, txt){
   } else if (/too many|invoked too many|simultaneous|quota|ใช้งานมากเกินไป/i.test(plain)) {
     kind = 'BUSY';
     msg = 'ระบบ Google มีผู้ใช้พร้อมกันมากเกินไป รอสักครู่แล้วลองใหม่';
-  } else if (/not found|ไม่พบ|unable to open|deleted|ถูกลบ/i.test(plain) || status === 404) {
-    kind = 'NOT_FOUND'; fatal = true;
-    msg = 'ไม่พบระบบหลังบ้านตามลิงก์ (ผู้ดูแลตรวจสอบว่า Deploy ยังเปิดอยู่)';
+  } else if (/Script function not found|ไม่พบฟังก์ชันสคริปต์/i.test(plain)) {
+    kind = 'NO_DOPOST'; fatal = true;
+    msg = 'เวอร์ชันที่ Deploy ไม่มีโค้ดครบ (ผู้ดูแลต้องวาง Code.gs ใหม่ทั้งไฟล์ แล้ว Deploy New version)';
+  } else if (/unable to open|ไม่สามารถเปิดไฟล์|not found|ไม่พบ/i.test(plain) || status === 404) {
+    kind = 'UNAVAILABLE';                                       // Google ตอบ "เปิดไฟล์ไม่ได้ในขณะนี้" มักหายเองในไม่กี่นาที
+    msg = 'ระบบ Google ไม่พร้อมชั่วคราว';
   } else {
     kind = 'TEMP';
     msg = 'ระบบ Google ไม่ตอบชั่วคราว ลองใหม่อีกครั้ง';
   }
   const e = new Error(msg);
   e.hiccup = true; e.fatal = fatal; e.kind = kind;
-  e.detail = (status || '') + ' ' + (title || plain.slice(0, 160));
+  e.detail = (status || '') + ' ' + (title ? title + ' | ' : '') + plain.slice(0, 200);
   return e;
 }
 /** เก็บรายละเอียดปัญหาไว้ในเครื่อง แล้วส่งให้ admin ดูเมื่อเชื่อมต่อได้ (ช่วยหาสาเหตุจริง) */
@@ -1579,12 +1582,12 @@ async function submitWith(form, fn, payload, onDone){
     note.hidden = false;
   }
   catch(err){
-    if ((err.net || (err.hiccup && !err.fatal)) && queueable) {
+    if ((err.net || err.hiccup) && queueable) {
       const q = qGet(); q.push({ fn: fn, payload: payload, user: S.profile && S.profile.user, booth: S.booth && S.booth.id }); qSet(q);
       const p = payload;
       onDone({ id: 'รอส่ง', queued: true, total: (p.perBox * p.boxQty) + (Number(p.loose) || 0), perBox: p.perBox,
                qty: p.qty, amount: (p.qty || 0) * (p.price || 0), diff: 0, to: '' });
-      toast((err.net ? 'ไม่มีสัญญาณ' : 'ระบบ Google ไม่ตอบชั่วคราว') + ': เก็บรายการไว้ในเครื่องแล้ว จะส่งให้อัตโนมัติ');
+      toast('บันทึกไว้ในเครื่องแล้ว จะส่งให้อัตโนมัติ' + (err.fatal ? ' (แจ้งผู้ดูแล: ' + err.message + ')' : ''));
       note.className = 'saved-note queued';
       note.innerHTML = '⏳ เก็บไว้ในเครื่องแล้ว (รอส่ง ' + q.length + ' รายการ)<br><small>ระบบจะส่งเองเมื่อมีสัญญาณ ห้ามล้างข้อมูลเบราว์เซอร์หรือออกจากระบบจนกว่าจะส่งครบ</small>';
       note.hidden = false;
@@ -1610,7 +1613,7 @@ function syncPerBox(it){
     note.textContent = S.canApprove ? 'ตั้งค่าไว้แล้ว กด "แก้ไข" ถ้าต้องการเปลี่ยน' : 'ตั้งค่าไว้แล้ว ถ้าไม่ถูกต้องแจ้ง Supervisor ให้แก้ไข';
   } else {
     inp.value = ''; inp.disabled = false; btn.hidden = true;
-    note.textContent = it ? 'สินค้านี้ยังไม่มีจำนวนต่อกล่อง กรุณาใส่ (ระบบจะจำไว้)' : '';
+    note.textContent = it ? 'สินค้านี้ยังไม่มีจำนวน MU ต่อลัง กรุณาใส่ (ระบบจะจำไว้)' : '';
   }
   calcCount();
 }
@@ -1629,8 +1632,8 @@ function calcCount(){
   const ok = $('cnt-perbox').value !== '' && $('cnt-box').value !== '' && isFinite(pb) && isFinite(bx) && isFinite(lo);
   $('cnt-total').textContent = ok ? (bx * pb + lo).toLocaleString('th-TH') : '–';
   $('cnt-total-note').textContent = ok
-    ? bx + ' กล่อง × ' + pb + ' + ' + lo + ' ชิ้นแยก'
-    : 'ระบบคำนวณ = กล่อง × ชิ้นต่อกล่อง + ชิ้นแยก';
+    ? bx + ' ลัง × ' + pb + ' + ' + lo + ' ชิ้นแยก'
+    : 'ระบบคำนวณ = ลัง × MU ต่อลัง + ชิ้นแยกไม่เต็มลัง';
 }
 ['cnt-perbox','cnt-box','cnt-loose'].forEach(id => $(id).addEventListener('input', calcCount));
 
@@ -1639,9 +1642,9 @@ $('tab-count').onsubmit = e => {
   const it = resolveItem('cnt-code');
   if (!runChecks([
     ['cnt-code', it ? '' : 'เลือกสินค้า'],
-    ['cnt-perbox', intErr('cnt-perbox', 'จำนวนต่อกล่อง', 1)],
-    ['cnt-box', intErr('cnt-box', 'จำนวนกล่อง', 0)],
-    ['cnt-loose', intErr('cnt-loose', 'ชิ้นแยก', 0, true)],
+    ['cnt-perbox', intErr('cnt-perbox', 'จำนวน MU ต่อลัง', 1)],
+    ['cnt-box', intErr('cnt-box', 'จำนวนลัง', 0)],
+    ['cnt-loose', intErr('cnt-loose', 'ชิ้นแยกไม่เต็มลัง', 0, true)],
   ])) return;
   const perBox = n('cnt-perbox');
   if (!needBooth()) return;
