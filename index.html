@@ -316,6 +316,8 @@
     <div class="hint" id="lgThai" hidden style="color:#8a6100;margin:-8px 0 8px">รหัสผ่านมีตัวอักษรไทย แป้นพิมพ์อาจเป็นภาษาไทยอยู่ ให้สลับเป็นภาษาอังกฤษ</div>
     <div class="err" id="lgErr" role="alert"></div>
     <button class="btn" id="lgBtn" type="button">เข้าสู่ระบบ</button>
+    <div class="foot"><button type="button" class="linkbtn" id="lgForgot">ลืมรหัสผ่าน?</button></div>
+    <div class="hint" id="lgForgotMsg" hidden style="text-align:center;margin-top:6px"></div>
     <div class="foot">ST175 · Off-site shop / Pop-up shop</div>
     <div class="foot"><button type="button" class="linkbtn" id="apiEdit" hidden>เปลี่ยนลิงก์เชื่อมต่อ</button></div>
   </div>
@@ -329,7 +331,10 @@
     <hr class="perf">
     <div class="field" id="pwCurBox" hidden>
       <label for="pwCur">รหัสผ่านปัจจุบัน</label>
-      <input id="pwCur" type="password" autocomplete="current-password">
+      <div class="pw">
+        <input id="pwCur" type="password" autocomplete="current-password">
+        <button type="button" data-toggle="pwCur">แสดง</button>
+      </div>
     </div>
     <div class="field">
       <label for="pwNew">รหัสผ่านใหม่</label>
@@ -696,6 +701,15 @@
       <div id="sys-box" hidden style="margin:12px 0">
         <button type="button" class="btn ghost" id="sys-load" style="width:100%">สถานะระบบ (admin): ผู้ใช้ออนไลน์ และความเร็ว</button>
         <div id="sys-out"></div>
+        <button type="button" class="btn ghost" id="usr-open" style="width:100%;margin-top:10px">จัดการผู้ใช้ (admin): ดูรหัสผ่าน / รีเซ็ต / ปลดล็อก</button>
+        <div id="usr-box" hidden style="margin-top:8px">
+          <div id="usr-req"></div>
+          <div class="picker" style="margin-top:8px">
+            <input id="usr-q" placeholder="รหัสพนักงาน หรือชื่อ" autocomplete="off">
+            <button type="button" class="btn" id="usr-find">ค้นหา</button>
+          </div>
+          <div id="usr-out"></div>
+        </div>
         <button type="button" class="btn ghost" id="bth-load" style="width:100%;margin-top:10px">จัดการบูธ (admin): เพิ่ม / แก้ไข / ปิดบูธ</button>
         <div id="bth-out" hidden>
           <div class="table-wrap"><table><thead><tr><th>รหัส</th><th>ชื่อบูธ</th><th>Zone</th><th>พนักงาน</th><th>ชีตนับ</th><th>สถานะ</th><th></th></tr></thead><tbody id="bth-rows"></tbody></table></div>
@@ -2049,6 +2063,71 @@ async function loadPending(){
   } catch(e){ /* เงียบไว้ ไม่รบกวนการใช้งาน */ }
   finally { pendBusy = false; }
 }
+
+
+/* ---------- ลืมรหัสผ่าน (หน้า login) ---------- */
+$('lgForgot').onclick = async () => {
+  const u = $('lgUser').value.trim(), m = $('lgForgotMsg');
+  m.hidden = false;
+  if (!u) { m.textContent = 'กรอกรหัสพนักงานในช่องด้านบนก่อน แล้วกด "ลืมรหัสผ่าน?" อีกครั้ง'; $('lgUser').focus(); return; }
+  m.textContent = 'กำลังส่งคำขอ…';
+  try {
+    await api('forgotPassword', u);
+    m.innerHTML = 'ส่งคำขอรีเซ็ตรหัสผ่านถึง admin แล้ว<br>แจ้ง admin หรือหัวหน้าให้รีเซ็ต แล้วจะได้รหัสชั่วคราวไว้เข้าระบบ';
+  } catch(e){ m.textContent = 'ส่งคำขอไม่ได้: ' + e.message + ' · ติดต่อ admin โดยตรง'; }
+};
+
+/* ---------- จัดการผู้ใช้ / รหัสผ่าน (admin) ---------- */
+function usrCard(x){
+  return '<div class="pend" data-u="' + esc(x.user) + '" style="border-left-color:var(--shelf);background:#fff">' +
+    '<b>' + esc(x.name) + '</b> · ' + esc(x.user) + '<br><small>' + esc(x.department) + ' · ' + esc(x.role) + '</small>' +
+    '<div style="margin:8px 0;padding:8px 10px;background:#F2F5F3;border-radius:8px">รหัสผ่านปัจจุบัน: <b style="font-family:monospace;font-size:1.1rem;letter-spacing:.04em">' + esc(x.password) + '</b>' +
+    '<br><small>' + esc(x.status) + (x.changedAt ? ' · เปลี่ยนเมื่อ ' + esc(x.changedAt) : '') + (x.locked ? ' · <b style="color:var(--red)">ถูกล็อกอยู่</b>' : '') + '</small></div>' +
+    '<div class="acts" style="flex-wrap:wrap">' +
+    '<button type="button" class="btn" data-m="temp">ตั้งรหัสชั่วคราว</button>' +
+    '<button type="button" class="btn ghost" data-m="initial">กลับไปรหัสตั้งต้น</button>' +
+    (x.locked ? '<button type="button" class="btn ghost" data-m="unlock">ปลดล็อก</button>' : '') + '</div></div>';
+}
+function bindUsr(){
+  $('usr-out').querySelectorAll('[data-m]').forEach(b => b.onclick = async () => {
+    const card = b.closest('[data-u]'), u = card.dataset.u, m = b.dataset.m;
+    let pw = '';
+    if (m === 'temp') {
+      pw = prompt('ตั้งรหัสชั่วคราว 6-8 ตัว (ภาษาอังกฤษ/ตัวเลข)\nเว้นว่างแล้วกด OK = ระบบสุ่มให้', '');
+      if (pw === null) return;
+      pw = pw.trim();
+    } else if (m === 'initial' && !confirm('กลับไปใช้รหัสตั้งต้นในชีต (คอลัมน์ pass) และให้พนักงานตั้งรหัสใหม่ตอน login?')) return;
+    card.querySelectorAll('button').forEach(x => x.disabled = true);
+    try {
+      const x = await api('adminResetPassword', S.token, { user: u, mode: m, password: pw });
+      card.outerHTML = usrCard(x); bindUsr();
+      toast(m === 'unlock' ? 'ปลดล็อกแล้ว' : 'ตั้งรหัสแล้ว: ' + x.password + ' (พนักงานต้องตั้งรหัสใหม่ตอน login)');
+      loadUsrReq();
+    } catch(e){ toast(e.message, true); card.querySelectorAll('button').forEach(x => x.disabled = false); }
+  });
+}
+function renderUsrReq(reqs){
+  $('usr-req').innerHTML = reqs && reqs.length
+    ? '<p class="hint" style="margin:0 0 4px"><b>คำขอรีเซ็ตรหัสผ่าน (' + reqs.length + ')</b> แตะชื่อเพื่อเปิด</p>' +
+      reqs.map(r => '<button type="button" class="btn ghost" data-req="' + esc(r.user) + '" style="margin:0 6px 6px 0;padding:6px 10px;min-height:0">' +
+        esc(r.name) + ' · ' + esc(r.at.slice(11, 16)) + '</button>').join('')
+    : '';
+  $('usr-req').querySelectorAll('[data-req]').forEach(b => b.onclick = () => { $('usr-q').value = b.dataset.req; findUsr(); });
+}
+async function findUsr(){
+  const q = $('usr-q').value.trim(), out = $('usr-out');
+  out.innerHTML = '<div class="empty">กำลังค้นหา…</div>';
+  try {
+    const r = await api('adminFindUser', S.token, q);
+    renderUsrReq(r.requests);
+    out.innerHTML = r.list.length ? r.list.map(usrCard).join('') : '<div class="empty">ไม่พบผู้ใช้</div>';
+    bindUsr();
+  } catch(e){ out.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+async function loadUsrReq(){ try { const r = await api('adminFindUser', S.token, '__none__'); renderUsrReq(r.requests); } catch(e){} }
+$('usr-open').onclick = () => { const b = $('usr-box'); b.hidden = !b.hidden; if (!b.hidden) { loadUsrReq(); $('usr-q').focus(); } };
+$('usr-find').onclick = findUsr;
+$('usr-q').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); findUsr(); } });
 
 /* ---------- จัดการบูธ (admin) ---------- */
 let BTH = [], bthEdit = null;
