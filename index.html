@@ -197,6 +197,7 @@
   .photos .ph{width:84px;height:84px;border-radius:10px;position:relative;overflow:hidden;background:#e9ece8}
   .photos .ph img{width:100%;height:100%;object-fit:cover}
   .photos .ph button{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;line-height:24px;padding:0}
+  .photos .ph-add + .ph-add{color:var(--ink)}
   .photos .ph-add{width:84px;height:84px;border-radius:10px;border:2px dashed var(--line);background:none;color:var(--shelf);font-weight:700;cursor:pointer;font-family:inherit}
   .saved-note.queued{background:#FFF6E2;border-left-color:var(--amber)}
   .saved-note.bad{background:#FBEDEA;border-left-color:var(--red);color:var(--red)}
@@ -449,12 +450,14 @@
       </div>
       <div class="field">
         <label>รูปถ่ายประกอบ (ไม่บังคับ)</label>
-        <div style="display:flex;align-items:center;gap:10px">
-          <button type="button" class="btn ghost" id="cnt-snap">ถ่ายรูป</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn ghost" id="cnt-snap">📷 ถ่ายรูป</button>
+          <button type="button" class="btn ghost" id="cnt-pick">🖼️ แกลเลอรี</button>
           <span style="color:var(--muted);font-size:.85rem" id="cnt-snap-note">ยังไม่มีรูป</span>
           <button type="button" class="linkbtn" id="cnt-snap-del" hidden>ลบรูป</button>
         </div>
         <input id="cnt-img" type="file" accept="image/*" capture="environment" class="hidden">
+        <input id="cnt-gallery" type="file" accept="image/*" class="hidden">
         <img id="cnt-preview" class="thumb hidden" alt="ตัวอย่างรูป">
       </div>
       <button class="btn" type="submit">บันทึกยอดนับ</button>
@@ -690,6 +693,7 @@
         <label>รูปใบเสร็จ (ถ้ามี) · สูงสุด 3 รูป</label>
         <div class="photos" id="sale-photos"></div>
         <input type="file" id="sale-receipt" accept="image/*" capture="environment" class="hidden">
+        <input type="file" id="sale-gallery" accept="image/*" multiple class="hidden">
         <small class="hint">แต่ละรูปย่อเหลือไม่เกิน 50 KB อัตโนมัติ</small>
       </div>
       <div class="field"><label for="sale-remark">หมายเหตุ</label><input id="sale-remark" placeholder="เช่น เลขที่ใบเสร็จ"></div>
@@ -1549,6 +1553,7 @@ async function compressImage(file, startMax, gray){
   throw new Error('ย่อรูปให้ต่ำกว่า 50 KB ไม่ได้ ลองถ่ายใหม่');
 }
 function kb(d){ return Math.ceil(dataUrlBytes(d) / 1024) + ' KB'; }
+$('cnt-gallery').onchange = e => { $('cnt-img').onchange({ target: e.target }); };
 $('cnt-img').onchange = async e => {
   const f = e.target.files[0]; S.img = null;
   if (!f) return $('cnt-preview').classList.add('hidden');
@@ -1557,12 +1562,13 @@ $('cnt-img').onchange = async e => {
   cntSnapUi();
 };
 function cntSnapUi(){
-  $('cnt-snap').textContent = S.img ? 'ถ่ายใหม่' : 'ถ่ายรูป';
+  $('cnt-snap').textContent = S.img ? '📷 ถ่ายใหม่' : '📷 ถ่ายรูป';
   $('cnt-snap-note').textContent = S.img ? 'แนบรูปแล้ว (' + kb(S.img) + ')' : 'ยังไม่มีรูป';
   $('cnt-snap-del').hidden = !S.img;
   if (!S.img) $('cnt-preview').classList.add('hidden');
 }
 $('cnt-snap').onclick = () => { $('cnt-img').value = ''; $('cnt-img').click(); };
+$('cnt-pick').onclick = () => { $('cnt-gallery').value = ''; $('cnt-gallery').click(); };
 $('cnt-snap-del').onclick = () => { S.img = null; $('cnt-img').value = ''; cntSnapUi(); };
 
 /* ---------- คิวออฟไลน์: ไม่มีสัญญาณ = เก็บในเครื่อง แล้วส่งเองเมื่อสัญญาณกลับมา ---------- */
@@ -1767,15 +1773,26 @@ async function refreshTodayNow(){
 let PHOTOS = [];
 function renderPhotos(){
   $('sale-photos').innerHTML = PHOTOS.map((d, i) => '<div class="ph"><img src="' + d + '" alt="ใบเสร็จ ' + (i + 1) + '"><button type="button" data-p="' + i + '" aria-label="ลบรูป">×</button></div>').join('') +
-    (PHOTOS.length < 3 ? '<button type="button" class="ph-add" id="sale-snap">📷<br>ถ่ายรูป' + (PHOTOS.length ? ' (' + (PHOTOS.length + 1) + '/3)' : '') + '</button>' : '');
+    (PHOTOS.length < 3 ? '<button type="button" class="ph-add" id="sale-snap">📷<br>ถ่ายรูป</button>' +
+      '<button type="button" class="ph-add" id="sale-pick">🖼️<br>แกลเลอรี</button>' +
+      '<span class="hint" style="align-self:center">' + PHOTOS.length + '/3 รูป</span>' : '');
   $('sale-photos').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { PHOTOS.splice(+b.dataset.p, 1); renderPhotos(); });
   const sn = $('sale-snap'); if (sn) sn.onclick = () => { $('sale-receipt').value = ''; $('sale-receipt').click(); };
+  const pk = $('sale-pick'); if (pk) pk.onclick = () => { $('sale-gallery').value = ''; $('sale-gallery').click(); };
 }
-$('sale-receipt').onchange = async e => {
-  const f = e.target.files[0]; if (!f || PHOTOS.length >= 3) return;
-  try { PHOTOS.push(await compressImage(f, 1400, true)); renderPhotos(); toast('แนบรูปที่ ' + PHOTOS.length + ' แล้ว'); }   // ใบเสร็จ: ขาวดำ อ่านตัวเลขออก
-  catch(err){ toast(err.message, true); }
-};
+async function addPhotos(files){
+  files = [...files].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp)$/i.test(f.name));
+  const room = 3 - PHOTOS.length;
+  if (!files.length || room <= 0) return;
+  if (files.length > room) toast('เลือกได้อีก ' + room + ' รูป ใช้ ' + room + ' รูปแรก', true);
+  for (const f of files.slice(0, room)) {
+    try { PHOTOS.push(await compressImage(f, 1400, true)); renderPhotos(); }   // ใบเสร็จ: ขาวดำ อ่านตัวเลขออก
+    catch(err){ toast(err.message, true); }
+  }
+  toast('แนบรูปแล้ว ' + PHOTOS.length + '/3');
+}
+$('sale-receipt').onchange = e => addPhotos(e.target.files);
+$('sale-gallery').onchange = e => addPhotos(e.target.files);
 function setReceipt(){ PHOTOS = []; renderPhotos(); }
 renderPhotos(); renderBill();
 
