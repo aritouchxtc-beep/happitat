@@ -749,16 +749,9 @@
             <option>รับเข้า</option><option>คืนจากลูกค้า</option>
             <option>ชำรุด/เสียหาย</option><option value="โอนออก">โอนออก (ไปบูธอื่น)</option><option>สูญหาย</option>
             <option>ปรับยอด</option>
-            <option value="ยกเลิกขาย">ยกเลิกขาย (ยกเลิกบิล)</option>
+            <option value="ยกเลิกขาย">ยกเลิกขาย (เอาสินค้าออกจากสต็อก)</option>
           </select><div class="field-err" id="adj-type-err"></div></div>
         <div class="field"><label for="adj-shift" class="req">กะ</label><select id="adj-shift" class="shift-select"></select></div>
-      </div>
-      <div class="field" id="adj-bill-box" hidden>
-        <label for="adj-bill" class="req">บิลที่ต้องการยกเลิก (วันนี้)</label>
-        <select id="adj-bill"><option value="">กำลังโหลดบิล…</option></select>
-        <div class="field-err" id="adj-bill-err"></div>
-        <div class="item-desc" id="adj-bill-desc"></div>
-        <small class="hint">ยกเลิกทั้งบิล ของคืนเข้าสต็อก และยอดขายถูกหักออก · ต้องให้ Supervisor / admin อนุมัติ · ถ้าต้องการแก้บางรายการ ใช้ปุ่ม ✏️ แก้ไข ในหน้าขายออก</small>
       </div>
       <div class="field" id="adj-item-box">
         <label for="adj-code" class="req">สินค้า</label>
@@ -2706,12 +2699,11 @@ $('sys-load').onclick = async () => {
 /* ---------- ปรับสต็อก ---------- */
 $('tab-adj').onsubmit = e => {
   e.preventDefault();
-  if ($('adj-type').value === 'ยกเลิกขาย') return voidFromAdj(e.target);
   const it = resolveItem('adj-code');
   const type = $('adj-type').value, q = $('adj-qty').value.trim();
   let qMsg = intErr('adj-qty', 'จำนวน', type === 'ปรับยอด' ? -1e9 : 1);
   if (!qMsg && type === 'ปรับยอด' && Number(q) === 0) qMsg = 'จำนวนต้องไม่เป็น 0';
-  const needReason = ['ชำรุด/เสียหาย', 'สูญหาย', 'ปรับยอด'].indexOf(type) > -1;
+  const needReason = ['ชำรุด/เสียหาย', 'สูญหาย', 'ปรับยอด', 'ยกเลิกขาย'].indexOf(type) > -1;
   if (!runChecks([
     ['adj-type', type ? '' : 'เลือกประเภท'],
     ['adj-shift', $('adj-shift').value ? '' : 'เลือกกะ'],
@@ -2737,44 +2729,9 @@ $('tab-adj').onsubmit = e => {
 };
 $('adj-type').addEventListener('change', () => {
   const t = $('adj-type').value;
-  $('adj-remark-label').classList.toggle('req', ['ชำรุด/เสียหาย', 'สูญหาย', 'ปรับยอด'].indexOf(t) > -1);
+  $('adj-remark-label').classList.toggle('req', ['ชำรุด/เสียหาย', 'สูญหาย', 'ปรับยอด', 'ยกเลิกขาย'].indexOf(t) > -1);
   $('adj-to-box').hidden = t !== 'โอนออก';
-  const v = t === 'ยกเลิกขาย';
-  $('adj-bill-box').hidden = !v; $('adj-item-box').hidden = v; $('adj-qty-row').hidden = v;
-  if (v) { $('adj-remark-label').classList.add('req'); loadVoidBills(); }
-  $('tab-adj').querySelector('button[type=submit]').textContent = v ? (S.canApprove ? 'ยกเลิกขาย' : 'ส่งคำขอยกเลิกขาย') : 'บันทึกการปรับสต็อก';
 });
-/* ประเภท "ยกเลิกขาย": เลือกบิลของวันนี้ แล้วส่งคำขอยกเลิกบิล (ใช้ระบบเดียวกับปุ่ม ✕ ยกเลิกบิล ในหน้าขายออก) */
-let VB = [];
-async function loadVoidBills(){
-  const sel = $('adj-bill'); sel.innerHTML = '<option value="">กำลังโหลดบิล…</option>'; $('adj-bill-desc').textContent = '';
-  try {
-    const r = await api('getBills', S.token, S.booth.id, '');
-    VB = (r.list || []).filter(x => !x.voided && !(x.req && x.req.status === 'รออนุมัติ'));
-    sel.innerHTML = '<option value="">' + (VB.length ? 'เลือกบิล (' + VB.length + ')' : 'วันนี้ไม่มีบิลที่ยกเลิกได้') + '</option>' +
-      VB.map((x, i) => '<option value="' + i + '">' + esc(x.time) + ' · ' + fmt0(x.amount) + ' ฿ · ' +
-        esc(x.items.map(t => t.desc.slice(0, 18) + '×' + t.qty).join(', ')) + (x.mine ? '' : ' · ' + esc(x.by)) + '</option>').join('');
-  } catch(e){ sel.innerHTML = '<option value="">โหลดบิลไม่ได้: ' + esc(e.message) + '</option>'; }
-}
-$('adj-bill').addEventListener('change', () => {
-  const x = VB[+$('adj-bill').value]; const d = $('adj-bill-desc');
-  if (!x || $('adj-bill').value === '') { d.textContent = ''; d.className = 'item-desc'; return; }
-  d.className = 'item-desc found';
-  d.innerHTML = '<b>' + esc(x.id.replace(/^BILL-\d{8}-/, 'บิล ')) + ' · ' + fmt0(x.amount) + ' ฿</b><span>' + esc(x.time) + ' · ' + esc(x.payment) + ' · ' +
-    esc(x.items.map(t => t.desc + ' ×' + t.qty).join(' · ')) + '</span>';
-});
-async function voidFromAdj(form){
-  const x = VB[+$('adj-bill').value], reason = $('adj-remark').value.trim();
-  if (!runChecks([['adj-bill', $('adj-bill').value !== '' && x ? '' : 'เลือกบิล'], ['adj-remark', reason ? '' : 'ใส่เหตุผลที่ยกเลิกขาย']])) return;
-  if (!needBooth()) return;
-  const btn = form.querySelector('button[type=submit]'), label = btn.textContent; btn.disabled = true; btn.textContent = 'กำลังส่ง…';
-  try {
-    const r = await api('requestSaleChange', S.token, { booth: S.booth.id, bill: x.id, type: 'VOID', reason: reason, cid: uid() });
-    toast(r.pending ? 'ส่งคำขอยกเลิกขายแล้ว รอ Supervisor อนุมัติ' : 'ยกเลิกขายแล้ว คืนสต็อกเรียบร้อย');
-    $('adj-remark').value = ''; loadVoidBills(); loadPending(); refreshToday();
-  } catch(e){ toast(e.message, true); }
-  finally { btn.disabled = false; btn.textContent = label; }
-}
 
 /* ---------- ประวัติ ---------- */
 function esc(s){ return String(s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;'); }
