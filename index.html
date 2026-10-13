@@ -205,7 +205,9 @@
   .ac .r1 small{display:block;color:var(--muted);font-size:.78rem}
   .ac .tg{flex:none;font-size:.75rem;padding:3px 9px;border-radius:999px;background:var(--mist);color:var(--shelf);font-weight:600;white-space:nowrap}
   .ac.diff .tg{background:#FBEDEA;color:var(--red)}.ac.wait .tg{background:#FFF1CC;color:#8a6100}.ac.saved .tg{background:#eee;color:#666}
-  .ac .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px;text-align:center}
+  .ac .nums div.adj{background:#FFF1CC}
+  .ac .adjby{display:block;margin-top:4px;font-size:.78rem;color:#8a6100}
+  .ac .nums{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px;text-align:center}
   .ac .nums div{background:#F3F6F4;border-radius:8px;padding:4px 0}.ac .nums small{display:block;font-size:.68rem;color:var(--muted)}.ac .nums b{font-size:1rem}
   .ac .cnt{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin-top:8px}
   .ac .cnt input{min-height:44px!important;text-align:center;font-size:1.1rem;font-weight:700}
@@ -606,6 +608,8 @@
         <div class="field"><label for="sh-restock" class="req">รับเติมระหว่างกะ</label><input id="sh-restock" type="number" min="0" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-restock-err"></div><div class="pull-note" id="sh-restock-note" hidden></div></div>
         <div class="field"><label for="sh-sales" class="req">ขายออก</label><input id="sh-sales" type="number" min="0" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-sales-err"></div>
           <div class="pull-note" id="sh-sales-note" hidden></div></div>
+        <div class="field"><label for="sh-adjust">ปรับสต็อกในกะ (±)</label><input id="sh-adjust" type="number" step="1" inputmode="numeric" value="0"><div class="field-err" id="sh-adjust-err"></div>
+          <div class="pull-note" id="sh-adjust-note" hidden></div></div>
         <div class="field"><label for="sh-actual" class="req">นับได้จริง</label><input id="sh-actual" type="number" min="0" step="1" inputmode="numeric"><div class="field-err" id="sh-actual-err"></div></div>
       </div>
       <div class="calc">
@@ -1862,7 +1866,7 @@ $('tab-count').onsubmit = e => {
 
 /* ---------- สรุปกะ ---------- */
 function calcShift(){
-  const exp = n('sh-open') + n('sh-restock') - n('sh-sales');
+  const exp = n('sh-open') + n('sh-restock') - n('sh-sales') + n('sh-adjust');
   $('sh-exp').textContent = exp;
   const has = $('sh-actual').value !== '';
   const diff = has ? n('sh-actual') - exp : null;
@@ -1870,7 +1874,7 @@ function calcShift(){
   $('sh-diffbox').className = !has || diff === 0 ? '' : diff < 0 ? 'neg' : 'pos';
   $('sh-remark-label').classList.toggle('req', has && diff !== 0);
 }
-['sh-open','sh-restock','sh-sales','sh-actual'].forEach(id => $(id).addEventListener('input', calcShift));
+['sh-open','sh-restock','sh-sales','sh-adjust','sh-actual'].forEach(id => $(id).addEventListener('input', calcShift));
 
 /* ---------- ขายออก ---------- */
 /* ---------- บิลขาย ---------- */
@@ -1998,14 +2002,16 @@ async function shPrefill(force){
   const key = [it.code, date, shift, S.booth.id].join('|');
   if (key === pfKey && !force) return;
   pfKey = key;
-  const my = ++pfSeq, f = ['sh-open', 'sh-restock', 'sh-sales'];
+  const my = ++pfSeq, f = ['sh-open', 'sh-restock', 'sh-sales', 'sh-adjust'];
   f.forEach(id => { $(id).disabled = true; $(id).value = ''; $(id).placeholder = 'กำลังดึง…'; });
-  ['sh-open-note', 'sh-restock-note'].forEach(id => $(id).hidden = true); salesNote('');
+  ['sh-open-note', 'sh-restock-note', 'sh-adjust-note'].forEach(id => $(id).hidden = true); salesNote('');
   const t0 = performance.now();
   try {
     const r = await api('getShiftPrefill', S.token, it.code, date, shift, S.booth.id);
     if (my !== pfSeq) return;                                   // เปลี่ยนสินค้าไปแล้ว ไม่ใช้ผลเก่า
-    $('sh-open').value = r.opening; $('sh-restock').value = r.restock; $('sh-sales').value = r.sales;
+    $('sh-open').value = r.opening; $('sh-restock').value = r.restock; $('sh-sales').value = r.sales; $('sh-adjust').value = r.adjust || 0;
+    const ab = Object.keys(r.adjustBy || {}); const an = $('sh-adjust-note');
+    an.textContent = ab.length ? ab.map(k => k + ' ' + (r.adjustBy[k] > 0 ? '+' : '') + r.adjustBy[k]).join(' · ') : 'ไม่มีการปรับสต็อกในกะนี้'; an.className = 'pull-note'; an.hidden = false;
     const on = $('sh-open-note'); on.textContent = 'จาก' + r.openingFrom; on.className = 'pull-note'; on.hidden = false;
     const rb = Object.keys(r.restockBy || {});
     const rn = $('sh-restock-note'); rn.textContent = rb.length ? rb.map(k => k + ' ' + r.restockBy[k]).join(' + ') : 'ไม่มีรับเข้า/โอนเข้าในกะนี้';
@@ -2030,7 +2036,7 @@ async function shPrefill(force){
   } catch(e){
     if (my !== pfSeq) return;
     pfKey = '';
-    [['sh-open', 0], ['sh-restock', 0], ['sh-sales', 0]].forEach(x => $(x[0]).value = x[1]);
+    [['sh-open', 0], ['sh-restock', 0], ['sh-sales', 0], ['sh-adjust', 0]].forEach(x => $(x[0]).value = x[1]);
     salesNote('ดึงข้อมูลอัตโนมัติไม่ได้: ' + esc(e.message) + ' · กรอกเองได้ หรือ <button type="button" id="sh-retry">ลองอีกครั้ง</button>', true);
     const rt = $('sh-retry'); if (rt) rt.onclick = () => shPrefillSoon(true);
   } finally {
@@ -2046,7 +2052,7 @@ $('sh-code').addEventListener('input', () => { if (S.items[$('sh-code').value.tr
 $('tab-shift').onsubmit = e => {
   e.preventDefault();
   const it = resolveItem('sh-code');
-  const exp = n('sh-open') + n('sh-restock') - n('sh-sales');
+  const exp = n('sh-open') + n('sh-restock') - n('sh-sales') + n('sh-adjust');
   const diff = $('sh-actual').value.trim() === '' ? 0 : n('sh-actual') - exp;
   if (!runChecks([
     ['sh-date', $('sh-date').value ? '' : 'เลือกวันที่'],
@@ -2061,14 +2067,14 @@ $('tab-shift').onsubmit = e => {
   if (!needBooth()) return;
   submitWith(e.target, 'saveShift', {
     booth: S.booth.id, date: isoToThai($('sh-date').value), shift: $('sh-shift').value, code: it.code, desc: it.desc,
-    opening: n('sh-open'), restock: n('sh-restock'), sales: n('sh-sales'), actual: n('sh-actual'),
+    opening: n('sh-open'), restock: n('sh-restock'), sales: n('sh-sales'), adjust: n('sh-adjust'), actual: n('sh-actual'),
     remark: $('sh-remark').value.trim()
   }, r => {
     toast(r.diff === 0 ? 'บันทึกสรุปกะแล้ว ยอดตรง' : 'บันทึกสรุปกะแล้ว ส่วนต่าง ' + r.diff, r.diff !== 0);
     ['sh-code','sh-actual','sh-remark'].forEach(id => $(id).value = '');
-    ['sh-open','sh-restock','sh-sales'].forEach(id => $(id).value = 0);
+    ['sh-open','sh-restock','sh-sales','sh-adjust'].forEach(id => $(id).value = 0);
     $('sh-code-desc').textContent = ''; $('sh-code-desc').className = 'item-desc'; calcShift();
-    pfKey = ''; ['sh-open-note', 'sh-restock-note'].forEach(id => $(id).hidden = true); salesNote('');
+    pfKey = ''; ['sh-open-note', 'sh-restock-note', 'sh-adjust-note'].forEach(id => $(id).hidden = true); salesNote('');
   });
 };
 
@@ -2462,7 +2468,7 @@ async function loadAuto(){
   const t0 = performance.now();
   try {
     AUTO = await api('getShiftAuto', S.token, date, shift, S.booth.id);
-    AUTO.list.forEach(x => { x.actual = x.counted === null ? '' : x.counted; x.pick = x.status === 'ok' || x.status === 'diff'; x.remark = ''; });
+    AUTO.list.forEach(x => { x.adjust = x.adjust || 0; x.actual = x.counted === null ? '' : x.counted; x.pick = x.status === 'ok' || x.status === 'diff'; x.remark = ''; });
     $('auto-info').textContent = AUTO.booth + ' · ' + shift + ' ' + date + ' · นับได้จริงใช้ยอดนับล่าสุดในแท็บนับสต็อกช่วง ' + AUTO.window +
       ' · ใช้เวลา ' + ((performance.now() - t0) / 1000).toFixed(1) + ' วิ';
     autoFilter = AUTO.summary.diff ? 'diff' : 'all';
@@ -2492,7 +2498,8 @@ function renderAuto(){
     return '<div class="ac ' + x.status + '" data-i="' + i + '"><div class="r1"><div><b>' + esc(x.desc || x.code) + '</b><small>' + esc(x.code) +
       (x.countedAt ? ' · นับ ' + esc(x.countedAt) + (x.countedBy ? ' ' + esc(x.countedBy) : '') : '') + ' · ยกมาจาก' + esc(x.openingFrom) + '</small></div><span class="tg">' + tag(x) + '</span></div>' +
       '<div class="nums"><div><small>ยกมา</small><b>' + x.opening + '</b></div><div><small>+รับเติม</small><b>' + x.restock + '</b></div>' +
-      '<div><small>−ขาย</small><b>' + x.sales + '</b></div><div><small>=ควรเหลือ</small><b>' + x.expected + '</b></div></div>' +
+      '<div><small>−ขาย</small><b>' + x.sales + '</b></div><div' + (x.adjust ? ' class="adj"' : '') + '><small>±ปรับ</small><b>' + (x.adjust > 0 ? '+' : '') + x.adjust + '</b></div><div><small>=ควรเหลือ</small><b>' + x.expected + '</b></div></div>' +
+      (x.adjust ? '<small class="adjby">ปรับในกะ: ' + esc(Object.keys(x.adjustBy || {}).map(k => k + ' ' + x.adjustBy[k]).join(' · ')) + '</small>' : '') +
       (x.saved ? '' : '<div class="cnt"><span style="font-size:.85rem">นับได้</span><input type="number" min="0" step="1" inputmode="numeric" data-a="' + i + '" value="' + esc(x.actual) + '" placeholder="ใส่ยอดที่นับ"' + dis + '>' +
         '<label><input type="checkbox" data-c="' + i + '"' + (x.pick ? ' checked' : '') + (x.status === 'wait' ? ' disabled' : '') + '> บันทึก</label></div>' +
         (x.status === 'diff' ? '<input class="rm" data-r="' + i + '" placeholder="หมายเหตุ (บังคับ) เช่น กล่องแตก" value="' + esc(x.remark) + '">' : '')) + '</div>';
@@ -2515,7 +2522,7 @@ $('auto-save').onclick = async () => {
     return toast((miss.desc || miss.code) + ': ยอดไม่ตรง ต้องใส่หมายเหตุ', true); }
   const btn = $('auto-save'), label = btn.textContent; btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
   const payload = { booth: S.booth.id, date: AUTO.date, shift: AUTO.shift, cid: uid(), at: new Date().toISOString(),
-    rows: rows.map(x => ({ code: x.code, desc: x.desc, opening: x.opening, restock: x.restock, sales: x.sales, actual: Number(x.actual), remark: x.remark || '' })) };
+    rows: rows.map(x => ({ code: x.code, desc: x.desc, opening: x.opening, restock: x.restock, sales: x.sales, adjust: x.adjust || 0, actual: Number(x.actual), remark: x.remark || '' })) };
   try {
     const r = await api('saveShiftAuto', S.token, payload);
     toast('บันทึกสรุปกะแล้ว ' + r.saved + ' รายการ' + (r.skipped ? ' · ข้าม ' + r.skipped + ' (บันทึกไว้แล้ว)' : '') + (r.diffs ? ' · ไม่ตรง ' + r.diffs : ''));
