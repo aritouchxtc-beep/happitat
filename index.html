@@ -2496,7 +2496,7 @@ function renderAuto(){
   $('auto-list').innerHTML = show.length ? show.map(x => {
     const i = L.indexOf(x), dis = x.saved ? ' disabled' : '';
     return '<div class="ac ' + x.status + '" data-i="' + i + '"><div class="r1"><div><b>' + esc(x.desc || x.code) + '</b><small>' + esc(x.code) +
-      (x.countedAt ? ' · นับ ' + esc(x.countedAt) + (x.countedBy ? ' ' + esc(x.countedBy) : '') : '') + ' · ยกมาจาก' + esc(x.openingFrom) + '</small></div><span class="tg">' + tag(x) + '</span></div>' +
+      (x.countedAt ? ' · นับ ' + esc(x.countedAt) + (x.countedBy ? ' ' + esc(x.countedBy) : '') + (x.salesAfter ? ' ได้ ' + x.countedRaw + ' − ขายหลังนับ ' + x.salesAfter + ' = ' + x.counted : '') : '') + ' · ยกมาจาก' + esc(x.openingFrom) + '</small></div><span class="tg">' + tag(x) + '</span></div>' +
       '<div class="nums"><div><small>ยกมา</small><b>' + x.opening + '</b></div><div><small>+รับเติม</small><b>' + x.restock + '</b></div>' +
       '<div><small>−ขาย</small><b>' + x.sales + '</b></div><div' + (x.adjust ? ' class="adj"' : '') + '><small>±ปรับ</small><b>' + (x.adjust > 0 ? '+' : '') + x.adjust + '</b></div><div><small>=ควรเหลือ</small><b>' + x.expected + '</b></div></div>' +
       (x.adjust ? '<small class="adjby">ปรับในกะ: ' + esc(Object.keys(x.adjustBy || {}).map(k => k + ' ' + x.adjustBy[k]).join(' · ')) + '</small>' : '') +
