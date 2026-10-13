@@ -157,6 +157,29 @@
   .stepper button:active{background:var(--mist)}
   .total-box{background:var(--shelf)!important;color:#fff!important;border:0!important}
   .total-box *{color:#fff!important}
+  .bills-box{margin-top:18px;border-top:1px dashed var(--line);padding-top:14px}
+  .bills-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .bc{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff}
+  .bc.pend{background:#FFFBF2}.bc.void{opacity:.65}
+  .bc .t1{display:flex;justify-content:space-between;gap:8px}.bc small{color:var(--muted)}
+  .bc .its{font-size:.86rem;margin:4px 0 8px;overflow-wrap:anywhere}
+  .bc .acts2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .bc .acts2 button{min-height:42px;border-radius:10px;border:0;font-weight:700;cursor:pointer;background:var(--mist);color:var(--shelf)}
+  .bc .acts2 button.del{background:#FBEDEA;color:var(--red)}
+  .bc .st{border-radius:8px;padding:6px 10px;font-size:.82rem}
+  .bc .st.w{background:#FFF6E2;color:#8a6100}.bc .st.v{background:#FBEDEA;color:var(--red)}.bc .st.n{background:#F3F6F4;color:var(--muted)}
+  #be .picker{flex-wrap:wrap}#be .picker input{flex:1 1 100%}#be .picker .btn{flex:1}
+  .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+  .sheet{background:var(--paper);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+  .sheet-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.sheet-h b{font-size:1.1rem}
+  .sheet-h button{border:0;background:#F3F6F4;border-radius:50%;width:36px;height:36px;font-size:1rem;cursor:pointer}
+  .el{display:grid;grid-template-columns:1fr auto;gap:6px 8px;padding:10px 0;border-bottom:1px solid #eef2ef}
+  .el.chg{background:#FFF6E2;margin:0 -16px;padding:10px 16px}.el.add{background:#EAF4EE;margin:0 -16px;padding:10px 16px}.el.del{opacity:.5}.el.del b{text-decoration:line-through}
+  .el b{overflow-wrap:anywhere}.el small{grid-column:1 / -1;color:#8a6100;font-size:.8rem}
+  .el .ctl{grid-column:1 / -1;display:flex;gap:8px;align-items:center}
+  .el .ctl input{width:110px;min-height:40px!important;text-align:right}
+  .el .x{border:0;background:none;color:var(--red);font-weight:700;font-size:1.1rem;cursor:pointer}
+  .pend.sale{border-left-color:var(--amber)}.pend.sale.void{border-left-color:var(--red)}
   .bill-list{border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 12px}
   .bl{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:10px 0;border-bottom:1px solid #eef2ef}
   .bl:last-child{border-bottom:0}
@@ -465,9 +488,9 @@
   </header>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="count" aria-selected="true"><i>📦</i>นับสต็อก</button>
-    <button role="tab" data-tab="sale" aria-selected="false" id="tabSaleBtn"><i>🧾</i>ขายออก</button>
+    <button role="tab" data-tab="sale" aria-selected="false" id="tabSaleBtn"><i>🛒</i>ขายออก</button>
     <button role="tab" data-tab="shift" aria-selected="false"><i>🔄</i>สรุปกะ</button>
-    <button role="tab" data-tab="adj" aria-selected="false"><i>🔧</i>ปรับสต็อก<span id="adjBadge" class="tab-badge" hidden></span></button>
+    <button role="tab" data-tab="adj" aria-selected="false"><i>🔧</i>ปรับ/อนุมัติ<span id="adjBadge" class="tab-badge" hidden></span></button>
     <button role="tab" data-tab="more" aria-selected="false" id="tabMoreBtn"><i>☰</i>เพิ่มเติม</button>
     <button role="tab" data-tab="report" aria-selected="false" class="sub-tab">ใบสรุปกะ</button>
     <button role="tab" data-tab="stk" aria-selected="false" class="sub-tab">ใบตรวจนับ</button>
@@ -794,6 +817,10 @@
       </div>
       <div class="field"><label for="sale-remark">หมายเหตุ</label><input id="sale-remark" placeholder="เช่น เลขที่ใบเสร็จ"></div>
       <button class="btn" type="submit" id="sale-submit">บันทึกบิล</button>
+      <div class="bills-box">
+        <div class="bills-h"><b id="bills-title">บิลวันนี้ของฉัน</b><button type="button" class="linkbtn" id="bills-reload">↻ โหลดใหม่</button></div>
+        <div id="bills-list"><div class="empty">กำลังโหลด…</div></div>
+      </div>
     </form>
 
     <!-- ประวัติ -->
@@ -850,6 +877,21 @@
   </main>
 </section>
 
+<div class="sheet-bg" id="be" hidden>
+  <div class="sheet">
+    <div class="sheet-h"><b id="be-title">แก้ไขบิล</b><button type="button" id="be-close" aria-label="ปิด">✕</button></div>
+    <p class="hint" style="margin:0 0 8px">แก้ได้: สินค้า · จำนวน · ราคา · ช่องทางชำระ · ลบบรรทัด · เพิ่มบรรทัด</p>
+    <div class="field"><label for="be-pay">ชำระโดย</label><select id="be-pay"><option>เงินสด</option><option>โอน / QR</option><option>บัตรเครดิต</option><option>อื่นๆ</option></select></div>
+    <div id="be-lines"></div>
+    <div class="field" style="margin-top:10px"><label for="be-code">เพิ่ม / เปลี่ยนสินค้า</label>
+      <div class="picker"><input id="be-code" list="itemList" placeholder="รหัสหรือชื่อสินค้า" autocomplete="off">
+        <button type="button" class="btn ghost" data-scan="be-code">📷 สแกน</button><button type="button" class="btn ghost" id="be-add">+ เพิ่ม</button></div>
+      <div class="item-desc" id="be-code-desc"></div></div>
+    <div class="calc"><div><small>เดิม</small><b id="be-old">0</b></div><div><small>ใหม่</small><b id="be-new">0</b></div></div>
+    <div class="field"><label for="be-reason" class="req">เหตุผล</label><input id="be-reason" placeholder="เช่น สแกนผิดรุ่น / ใส่ราคาผิด"></div>
+    <button type="button" class="btn" id="be-send">ส่งขออนุมัติ</button>
+  </div>
+</div>
 <datalist id="itemList"></datalist>
 <input type="file" id="qr-file" accept="image/*" capture="environment" class="hidden">
 <div id="qr-tmp"></div>
@@ -916,6 +958,7 @@ function netError(){
 function api(fn, ...args){
   const fail = msg => {
     if (msg.includes('SESSION_EXPIRED')) showLogin('หมดเวลาใช้งาน เข้าสู่ระบบอีกครั้ง');
+    if (/ไม่รู้จักคำสั่ง/.test(msg)) { oldServer(); msg = 'ระบบหลังบ้านยังเป็นเวอร์ชันเก่า (ผู้ดูแลต้องวาง Code.gs ใหม่ แล้ว Deploy New version)'; }
     return new Error(msg.indexOf('Error: ') === 0 ? msg.slice(7) : msg);
   };
   const t0 = performance.now();
@@ -1145,7 +1188,7 @@ async function enterApp(){
   refreshToday();
   setupShifts(); $('sh-date').value = todayISO(); $('rp-date').value = todayISO(); $('stk-date').value = todayISO();
   loadBooths();
-  updateQBadge(); setTimeout(flushQueue, 2000);
+  updateQBadge(); setTimeout(flushQueue, 2000); setTimeout(checkServer, 1500);
   try {
     const list = await api('getItems', S.token);
     S.items = {}; S.barcodes = {}; const dl = $('itemList'); dl.innerHTML = '';
@@ -1314,6 +1357,7 @@ document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
   if (b.classList.contains('sub-tab')) $('tabMoreBtn').setAttribute('aria-selected', 'true');   // หน้าย่อยของ "เพิ่มเติม"
   $('ctxMenu').hidden = true; window.scrollTo(0, 0);
   if (b.dataset.tab === 'adj') loadPending();
+  if (b.dataset.tab === 'sale') loadBills();
 });
 
 /* ---------- item picker ---------- */
@@ -1363,6 +1407,7 @@ function applyScan(text){
   if (it && next) setTimeout(() => $(next).focus(), 350);   // ไปช่องใส่จำนวนต่อทันที
   if (it && S.scanTarget === 'sh-code') shPrefillSoon();
   if (it && S.scanTarget === 'sale-code') scanToBill(it);
+  if (it && S.scanTarget === 'be-code') addBELine(it);
   if (!it) toast('อ่านได้รหัส ' + code + ' แต่ไม่พบในรายการสินค้า', true);
 }
 
@@ -1713,6 +1758,7 @@ async function flushQueue(manual){
 }
 window.addEventListener('online', () => setTimeout(flushQueue, 1500));
 setInterval(() => { if (navigator.onLine !== false) flushQueue(); }, 30000);
+setInterval(() => { if (S.canApprove && S.token && !document.hidden) loadPending(); }, 60000);   // แจ้งคำขอรออนุมัติ
 
 async function submitWith(form, fn, payload, onDone){
   const btn = form.querySelector('button[type=submit]'), label = btn.textContent;
@@ -1933,7 +1979,7 @@ $('tab-sale').onsubmit = e => {
     items: BILL.map(x => ({ code: x.code, desc: x.desc, qty: x.qty, price: x.price })), receipts: PHOTOS.slice()
   }, r => {
     toast(r.queued ? 'เก็บบิลไว้ในเครื่อง จะส่งให้อัตโนมัติ' : 'บันทึกบิลแล้ว · ' + r.lines + ' รายการ · ' + fmtB(r.amount) + ' ฿');
-    BILL = []; renderBill(); setReceipt(); $('sale-remark').value = '';
+    BILL = []; renderBill(); setReceipt(); $('sale-remark').value = ''; if (!r.queued) loadBills();
     refreshToday(); $('sale-code').focus();
   });
 };
@@ -2231,15 +2277,31 @@ async function loadPending(){
   pendBusy = true;
   try {
     const r = await api('getPendingAdj', S.token, S.booth.id);
-    const box = $('adj-pend-box'), list = r.list || [];
-    $('adjBadge').hidden = !list.length; $('adjBadge').textContent = list.length;
-    box.hidden = !list.length;
-    $('adj-pend-title').textContent = 'รออนุมัติ ' + list.length + ' รายการ' + (r.canApprove ? '' : ' (รอ Supervisor)');
-    $('adj-pend').innerHTML = list.map(x =>
+    const box = $('adj-pend-box'), list = r.list || [], sales = r.sales || [], n = list.length + sales.length;
+    $('adjBadge').hidden = !n; $('adjBadge').textContent = n;
+    box.hidden = !n;
+    $('adj-pend-title').textContent = 'รออนุมัติ ' + n + ' รายการ' + (r.canApprove ? '' : ' (รอ Supervisor)');
+    $('adj-pend').innerHTML = sales.map(x =>
+      '<div class="pend sale' + (x.type === 'VOID' ? ' void' : '') + '" data-sid="' + esc(x.id) + '"><b>' + (x.type === 'VOID' ? 'ยกเลิกบิล ' : 'แก้ไขบิล ') + esc(x.bill.replace(/^BILL-\d{8}-/, '')) +
+      '</b> · <b style="color:' + (x.delta < 0 ? 'var(--red)' : 'var(--shelf)') + '">' + (x.delta > 0 ? '+' : '') + fmt0(x.delta) + ' ฿</b>' +
+      '<br><small>' + esc(x.by) + ' · ' + esc(x.at) + ' · ' + esc(x.shift) + ' · เหตุผล: ' + esc(x.reason) + '</small>' +
+      '<div style="font-size:.86rem;margin-top:4px">' + esc(x.summary) + '</div>' +
+      (r.canApprove ? '<div class="acts"><button type="button" class="btn" data-sok="1">อนุมัติ</button><button type="button" class="btn ghost" data-sok="0">ไม่อนุมัติ</button></div>' : '') + '</div>').join('') +
+      list.map(x =>
       '<div class="pend" data-id="' + esc(x.id) + '"><b>' + esc(x.type) + ' ' + (x.qty > 0 ? '+' : '') + x.qty + '</b> · ' + esc(x.code) + ' ' + esc(x.desc) +
       '<br><small>' + esc(x.by) + ' · ' + esc(x.at) + ' · ' + esc(x.shift) + (x.remark ? ' · ' + esc(x.remark) : '') + '</small>' +
       (r.canApprove ? '<div class="acts"><button type="button" class="btn" data-ok="1">อนุมัติ</button>' +
         '<button type="button" class="btn ghost" data-ok="0">ไม่อนุมัติ</button></div>' : '') + '</div>').join('');
+    $('adj-pend').querySelectorAll('[data-sok]').forEach(btn => btn.onclick = async () => {
+      const card = btn.closest('[data-sid]'), ok = btn.dataset.sok === '1';
+      let reason = '';
+      if (!ok) { reason = (prompt('เหตุผลที่ไม่อนุมัติ') || '').trim(); if (!reason) return toast('ต้องใส่เหตุผลที่ไม่อนุมัติ', true); }
+      card.querySelectorAll('button').forEach(x => x.disabled = true);
+      try { await api('decideSaleChange', S.token, { booth: S.booth.id, id: card.dataset.sid, approve: ok, reason: reason });
+        toast(ok ? 'อนุมัติแล้ว ปรับยอดขายและสต็อกเรียบร้อย' : 'ไม่อนุมัติ บันทึกเหตุผลแล้ว'); refreshToday(); }
+      catch(e){ toast(e.message, true); }
+      pendBusy = false; loadPending();
+    });
     $('adj-pend').querySelectorAll('[data-ok]').forEach(btn => btn.onclick = async () => {
       const card = btn.closest('.pend'), ok = btn.dataset.ok === '1';
       let reason = '';
@@ -2320,6 +2382,19 @@ $('usr-open').onclick = () => { const b = $('usr-box'); b.hidden = !b.hidden; if
 $('usr-find').onclick = findUsr;
 $('usr-q').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); findUsr(); } });
 
+
+/* ---------- ตรวจว่า Code.gs ที่ Deploy ตรงกับหน้าเว็บนี้ ---------- */
+const SERVER_NEED = '2026-10-13';
+function oldServer(v){
+  if (document.getElementById('srvWarn')) return;
+  const d = document.createElement('div'); d.id = 'srvWarn';
+  d.style.cssText = 'background:#FBEDEA;color:#8a1f12;padding:10px 14px;font-size:.88rem;border-bottom:2px solid #C0392B';
+  d.innerHTML = '<b>ระบบหลังบ้านเป็นเวอร์ชันเก่า</b>' + (v ? ' (' + esc(v) + ')' : '') + ' บางเมนูจะใช้ไม่ได้ · ผู้ดูแล: วาง Code.gs ใหม่ → Run authorizeAll → Deploy New version';
+  document.querySelector('main').prepend(d);
+}
+async function checkServer(){
+  try { const r = await api('ping'); if (!r || !r.version || r.version < SERVER_NEED) oldServer(r && r.version); } catch(e){}
+}
 
 /* ---------- มือถือ: ปุ่ม − / + , เมนูเพิ่มเติม, ชิปบูธ/กะ ---------- */
 function makeStepper(id, min){
@@ -2449,6 +2524,98 @@ $('auto-save').onclick = async () => {
       toast('บันทึกไว้ในเครื่องแล้ว จะส่งให้อัตโนมัติ'); rows.forEach(x => x.saved = true); renderAuto(); }
     else { toast(e.message, true); btn.disabled = false; btn.textContent = label; }
   }
+};
+
+
+/* ---------- บิลวันนี้ · แก้ไข / ยกเลิกบิล ---------- */
+let BILLS = [], BE = null;
+const fmt0 = v => Number(v || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+async function loadBills(){
+  if (!S.booth || !S.token) return;
+  try {
+    const r = await api('getBills', S.token, S.booth.id, '');
+    BILLS = r.list || [];
+    $('bills-title').textContent = (r.all ? 'บิลวันนี้ของบูธ' : 'บิลวันนี้ของฉัน') + ' (' + BILLS.length + ')';
+    $('bills-list').innerHTML = BILLS.length ? BILLS.map((x, i) => {
+      const req = x.req, pend = req && req.status === 'รออนุมัติ';
+      const its = x.items.map(t => esc(t.desc) + ' ×' + t.qty).join(' · ');
+      let st = '';
+      if (x.voided) st = '<div class="st v">' + (req && req.type === 'EDIT' ? 'แก้ไขแล้ว → ดูบิลใหม่ด้านบน' : 'ยกเลิกแล้ว') + (req ? ' · อนุมัติโดย ' + esc(req.approvedBy) + ' · ' + esc(req.reason) : '') + '</div>';
+      else if (pend) st = '<div class="st w">⏳ รออนุมัติ' + (req.type === 'VOID' ? 'ยกเลิก' : 'แก้ไข') + ': ' + esc(req.summary) + '</div>';
+      else if (req && req.status === 'ไม่อนุมัติ') st = '<div class="st n">คำขอไม่อนุมัติ: ' + esc(req.rejectReason) + '</div>';
+      const can = !x.voided && !pend;
+      return '<div class="bc' + (pend ? ' pend' : '') + (x.voided ? ' void' : '') + '"><div class="t1"><b>' + esc(x.id.replace(/^BILL-\d{8}-/, 'บิล ')) + '</b><b>' + fmt0(x.amount) + ' ฿</b></div>' +
+        '<small>' + esc(x.time) + ' · ' + esc(x.shift) + ' · ' + esc(x.payment) + (x.mine ? '' : ' · ' + esc(x.by)) + (x.editOf ? ' · แก้ไขจากบิลเดิม' : '') + '</small>' +
+        '<div class="its">' + (x.voided ? '<s>' + its + '</s>' : its) + '</div>' + st +
+        (can ? '<div class="acts2"><button type="button" data-be="' + i + '">✏️ แก้ไข</button><button type="button" class="del" data-bv="' + i + '">✕ ยกเลิกบิล</button></div>' : '') + '</div>';
+    }).join('') : '<div class="empty">วันนี้ยังไม่มีบิล</div>';
+    $('bills-list').querySelectorAll('[data-be]').forEach(b => b.onclick = () => openBillEdit(BILLS[+b.dataset.be]));
+    $('bills-list').querySelectorAll('[data-bv]').forEach(b => b.onclick = () => voidBill(BILLS[+b.dataset.bv]));
+  } catch(e){ $('bills-list').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+$('bills-reload').onclick = loadBills;
+function selfApprove(x){ return S.canApprove && !x.mine; }
+async function voidBill(x){
+  const reason = (prompt('เหตุผลที่ยกเลิกบิล ' + fmt0(x.amount) + ' ฿\n(เช่น ลูกค้าเปลี่ยนใจ คืนเงิน)') || '').trim();
+  if (!reason) return toast('ต้องใส่เหตุผลที่ยกเลิก', true);
+  try {
+    const r = await api('requestSaleChange', S.token, { booth: S.booth.id, bill: x.id, type: 'VOID', reason: reason, cid: uid() });
+    toast(r.pending ? 'ส่งคำขอยกเลิกแล้ว รอ Supervisor อนุมัติ' : 'ยกเลิกบิลแล้ว คืนสต็อกเรียบร้อย');
+    loadBills(); refreshToday(); loadPending();
+  } catch(e){ toast(e.message, true); }
+}
+function openBillEdit(x){
+  BE = { bill: x, lines: x.items.map(t => ({ code: t.code, desc: t.desc, qty: t.qty, price: t.price, oq: t.qty, op: t.price, del: false, add: false })) };
+  $('be-title').textContent = 'แก้ไขบิล ' + x.id.replace(/^BILL-\d{8}-/, '') + ' · ' + fmt0(x.amount) + ' ฿';
+  $('be-pay').value = x.payment || 'เงินสด'; $('be-reason').value = ''; $('be-code').value = ''; $('be-code-desc').textContent = '';
+  $('be-send').textContent = selfApprove(x) ? 'บันทึกการแก้ไข (มีผลทันที)' : 'ส่งขออนุมัติ';
+  renderBE(); $('be').hidden = false; document.body.style.overflow = 'hidden';
+}
+function closeBE(){ $('be').hidden = true; document.body.style.overflow = ''; BE = null; }
+$('be-close').onclick = closeBE;
+$('be').addEventListener('click', e => { if (e.target === $('be')) closeBE(); });
+function renderBE(){
+  const L = BE.lines;
+  $('be-lines').innerHTML = L.map((x, i) => {
+    const chg = !x.add && !x.del && (x.qty !== x.oq || x.price !== x.op);
+    const note = x.del ? 'ลบบรรทัด' : x.add ? 'เพิ่มใหม่' : chg ? [x.qty !== x.oq ? 'จำนวน ' + x.oq + ' → ' + x.qty : '', x.price !== x.op ? 'ราคา ' + fmt0(x.op) + ' → ' + fmt0(x.price) : ''].filter(Boolean).join(' · ') : '';
+    return '<div class="el' + (x.del ? ' del' : x.add ? ' add' : chg ? ' chg' : '') + '"><b>' + esc(x.desc) + ' <small style="display:inline;color:var(--muted)">' + esc(x.code) + '</small></b>' +
+      (x.del ? '<button type="button" class="linkbtn" data-u="' + i + '">↶ คืน</button>' : '<button type="button" class="x" data-d="' + i + '" aria-label="ลบ">×</button>') +
+      (note ? '<small>' + note + '</small>' : '') +
+      (x.del ? '' : '<div class="ctl"><span class="qty-mini"><button type="button" data-m="' + i + '">−</button><b>' + x.qty + '</b><button type="button" data-p="' + i + '">+</button></span>' +
+        '<span style="margin-left:auto;font-size:.85rem">ราคา</span><input type="number" min="0.01" step="0.01" inputmode="decimal" data-pr="' + i + '" value="' + x.price + '"></div>') + '</div>';
+  }).join('') || '<div class="empty">ไม่มีรายการ</div>';
+  const q = s2 => $('be-lines').querySelectorAll(s2);
+  q('[data-d]').forEach(b => b.onclick = () => { const x = L[+b.dataset.d]; if (x.add) L.splice(+b.dataset.d, 1); else x.del = true; renderBE(); });
+  q('[data-u]').forEach(b => b.onclick = () => { L[+b.dataset.u].del = false; renderBE(); });
+  q('[data-p]').forEach(b => b.onclick = () => { L[+b.dataset.p].qty++; renderBE(); });
+  q('[data-m]').forEach(b => b.onclick = () => { const x = L[+b.dataset.m]; if (x.qty > 1) { x.qty--; renderBE(); } });
+  q('[data-pr]').forEach(inp => inp.onchange = () => { const v = Number(inp.value); if (v > 0) L[+inp.dataset.pr].price = v; renderBE(); });
+  const nw = L.filter(x => !x.del).reduce((a, x) => a + x.qty * x.price, 0);
+  $('be-old').textContent = fmt0(BE.bill.amount) + ' ฿'; $('be-new').textContent = fmt0(nw) + ' ฿';
+}
+function addBELine(it){
+  if (!BE || !it) return;
+  const price = Number(String(it.price || '').split(',').join('')) || 0;
+  const same = BE.lines.find(x => x.code === it.code && !x.del);
+  if (same) same.qty++; else BE.lines.push({ code: it.code, desc: it.desc, qty: 1, price: price, oq: 0, op: price, del: false, add: true });
+  $('be-code').value = ''; $('be-code-desc').textContent = ''; $('be-code-desc').className = 'item-desc';
+  renderBE(); if (!price) toast('ใส่ราคาของสินค้าที่เพิ่ม', true);
+}
+$('be-add').onclick = () => { const it = resolveItem('be-code'); if (!it) return toast('เลือกสินค้าจากรายการก่อน', true); addBELine(it); };
+$('be-send').onclick = async () => {
+  const reason = $('be-reason').value.trim();
+  if (!reason) { $('be-reason').classList.add('invalid'); $('be-reason').focus(); return toast('ใส่เหตุผลที่แก้ไข', true); }
+  const items = BE.lines.filter(x => !x.del).map(x => ({ code: x.code, desc: x.desc, qty: x.qty, price: x.price }));
+  if (!items.length) return toast('ลบทุกบรรทัดแล้ว ถ้าต้องการยกเลิกทั้งบิล ให้กด "ยกเลิกบิล"', true);
+  if (items.some(x => !(x.price > 0))) return toast('ใส่ราคาให้ครบทุกบรรทัด', true);
+  const btn = $('be-send'), label = btn.textContent; btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+  try {
+    const r = await api('requestSaleChange', S.token, { booth: S.booth.id, bill: BE.bill.id, type: 'EDIT', reason: reason, payment: $('be-pay').value, items: items, cid: uid() });
+    toast(r.pending ? 'ส่งคำขอแก้ไขแล้ว รอ Supervisor อนุมัติ' : 'แก้ไขบิลแล้ว');
+    closeBE(); loadBills(); refreshToday(); loadPending();
+  } catch(e){ toast(e.message, true); }
+  finally { btn.disabled = false; btn.textContent = label; }
 };
 
 /* ---------- จัดการบูธ (admin) ---------- */
