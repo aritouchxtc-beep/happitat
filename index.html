@@ -1000,9 +1000,13 @@
 
 <script>
 // กะการทำงาน (แก้ชื่อ/เวลาได้ที่นี่)
+// SHIFT_SWITCH = เวลาที่ระบบเปลี่ยนเป็นกะบ่ายให้อัตโนมัติ (เช่น '13:00' หรือ '13:30') · กะบ่ายยาว 9 ชม. (13:00–22:00 / 13:30–22:30)
+const SHIFT_SWITCH = '13:00';
+const SW_MIN = (([h, m]) => h * 60 + (m || 0))(SHIFT_SWITCH.split(':').map(Number));
+const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 const SHIFT_DEFS = [
-  { name: 'กะเช้า', start: 9,  end: 18, label: '09:00–18:00 น.' },
-  { name: 'กะบ่าย', start: 13, end: 22, label: '13:00–22:00 น.' },
+  { name: 'กะเช้า', label: '09:00–18:00 น.' },
+  { name: 'กะบ่าย', label: hhmm(SW_MIN) + '–' + hhmm(SW_MIN + 9 * 60) + ' น.' },
 ];
 const SHIFTS = SHIFT_DEFS.map(x => x.name);
 const S = { token:null, profile:null, items:{}, barcodes:{}, scanTarget:null, img:null };
@@ -1368,15 +1372,14 @@ async function showLastCount(it){
 /* ---------- helpers ---------- */
 function todayISO(){ const d = new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function isoToThai(v){ if(!v) return ''; const [y,m,d] = v.split('-'); return d+'/'+m+'/'+y; }
-/* กะของฉันวันนี้: จำตามที่เลือกไว้ (ต่อผู้ใช้ ต่อวัน) ถ้ายังไม่เลือก เดาจากเวลา ช่วงที่กะทับกัน (13:00–17:59) ต้องให้ผู้ใช้เลือก */
-function shiftKey(){ return 'happitat_shift_' + (S.profile ? S.profile.user : '') + '_' + todayISO(); }
+/* กะของฉันวันนี้: ออโต้ตามเวลา ก่อน SHIFT_SWITCH = กะเช้า · ตั้งแต่ SHIFT_SWITCH = กะบ่าย
+ * ถ้าผู้ใช้เลือกเอง จำไว้เฉพาะช่วงเวลานั้น พอถึงเวลาเปลี่ยนกะ ระบบเปลี่ยนให้เองอีกครั้ง */
+function shiftPeriod(){ const d = new Date(); return d.getHours() * 60 + d.getMinutes() >= SW_MIN ? 1 : 0; }
+function autoShift(){ return SHIFTS[shiftPeriod()]; }
+function shiftKey(){ return 'happitat_shift_' + (S.profile ? S.profile.user : '') + '_' + todayISO() + '_' + shiftPeriod(); }
 function myShift(){
   try { const v = localStorage.getItem(shiftKey()); if (SHIFTS.indexOf(v) > -1) return v; } catch(e){}
-  const h = new Date().getHours();
-  const hit = SHIFT_DEFS.filter(x => h >= x.start && h < x.end);
-  if (hit.length === 1) return hit[0].name;
-  if (!hit.length) return h < SHIFT_DEFS[0].start ? SHIFT_DEFS[0].name : SHIFT_DEFS[SHIFT_DEFS.length - 1].name;
-  return null;                                            // ช่วงกะทับกัน
+  return autoShift();
 }
 function guessShift(){ return myShift() || SHIFTS[0]; }
 function setMyShift(name, persist){
@@ -1400,6 +1403,19 @@ function askShiftIfNeeded(){
   const s = myShift();
   if (s) setMyShift(s); else showShiftPicker();
 }
+let lastPeriod = null;
+setInterval(() => {                                       // ถึงเวลาเปลี่ยนกะ (เช่น 13:00) เปลี่ยนเป็นกะบ่ายให้เอง
+  const p = shiftPeriod() + '|' + todayISO();
+  if (lastPeriod === null) { lastPeriod = p; return; }
+  if (p === lastPeriod) return;
+  lastPeriod = p;
+  if (!S.token || !S.booth) return;
+  const name = myShift();
+  ['sale-shift', 'adj-shift'].forEach(id => { if ($(id)) $(id).value = name; });
+  const d = SHIFT_DEFS.find(x => x.name === name);
+  $('shiftName').textContent = name + (d ? ' · ' + d.label : '');
+  refreshToday(); toast('ถึงเวลา ' + (shiftPeriod() ? SHIFT_SWITCH : '00:00') + ' เปลี่ยนเป็น ' + name + ' อัตโนมัติ');
+}, 20000);
 function setupShifts(){
   document.querySelectorAll('.shift-select').forEach(sel => {
     sel.innerHTML = SHIFTS.map(s => '<option>' + s + '</option>').join('');
