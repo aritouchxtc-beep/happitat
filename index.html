@@ -215,6 +215,72 @@
   .ac .cnt label input{width:22px;height:22px;min-height:0!important}
   .ac .rm{margin-top:6px;min-height:42px!important;font-size:.92rem}
   @media (min-width:700px){nav.tabs{border-radius:16px 16px 0 0}}
+
+  /* ---------- คอมพิวเตอร์ / แท็บเล็ตแนวนอน (จอกว้าง ≥ 1024px) — มือถือไม่ได้รับผล ---------- */
+  .desk-only{display:none!important}
+  @media (min-width:1024px){
+    .desk-only{display:revert!important}
+    a.side-link.desk-only{display:flex!important}
+    .desk-only[hidden],a.side-link.desk-only[hidden]{display:none!important}
+    nav.tabs{top:0;bottom:0;left:0;right:auto;width:232px;max-width:none;margin:0;border-radius:0!important;flex-direction:column;align-items:stretch;
+      background:var(--shelf);border:0;box-shadow:none;padding:14px 12px;overflow-y:auto;gap:2px}
+    nav.tabs button,nav.tabs .side-link{flex:none;flex-direction:row;justify-content:flex-start;gap:10px;font-size:.95rem;padding:10px 12px;border:0!important;
+      border-radius:10px;color:rgba(255,255,255,.9);background:none;text-align:left;cursor:pointer;text-decoration:none;display:flex;align-items:center}
+    nav.tabs button i,nav.tabs .side-link i{font-style:normal;font-size:1.1rem;width:22px;text-align:center;line-height:1}
+    nav.tabs button:hover,nav.tabs .side-link:hover{background:rgba(255,255,255,.08)}
+    nav.tabs button[aria-selected="true"]{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
+    nav.tabs button.sub-tab{display:flex}
+    nav.tabs #tabMoreBtn{display:none}
+    nav.tabs button[data-tab=count]{order:2} nav.tabs button[data-tab=sale]{order:3} nav.tabs button[data-tab=shift]{order:4} nav.tabs button[data-tab=adj]{order:5}
+    nav.tabs button[data-tab=report]{order:7} nav.tabs button[data-tab=stk]{order:8} nav.tabs button[data-tab=hist]{order:9}
+    nav.tabs .tab-badge{position:static;margin-left:auto}
+    .side-brand{display:flex!important;align-items:center;gap:10px;padding:2px 6px 14px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.15);color:#fff;order:0}
+    .side-brand .av{width:38px;height:38px;border-radius:50%;background:var(--amber);color:var(--ink);display:grid;place-items:center;font-weight:700;flex:none}
+    .side-brand b{display:block}.side-brand small{display:block;font-size:.78rem;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+    .side-grp{color:rgba(255,255,255,.55);font-size:.72rem;letter-spacing:.06em;margin:12px 12px 2px}
+    .side-foot{margin-top:auto;order:20;border-top:1px solid rgba(255,255,255,.15);padding-top:8px;display:block!important}
+    .side-foot .side-link{font-size:.88rem;padding:8px 12px}
+    header.bar{margin-left:232px;background:#fff;color:var(--ink);border-bottom:1px solid var(--line);height:60px;padding:0 24px}
+    header.bar .av,header.bar .t{display:none}
+    header.bar .desk-title{display:block!important;flex:1;margin:0;font-size:1.2rem}
+    header.bar .ctx-chip{background:#F6F9F7;color:var(--ink);border:1px solid var(--line);max-width:none}
+    header.bar .acts button{border-color:var(--line);color:var(--ink)}
+    .ctx-menu{top:64px;right:24px}
+    main{margin-left:232px;max-width:1200px;padding:20px 28px 40px}
+    #srvWarn{margin:-4px 0 12px;border-radius:10px}
+    .panel{padding:22px 24px}
+    #tab-count,#tab-shift:not(.auto-on),#tab-report,#tab-stk,#tab-more{max-width:860px}
+    #tab-count>.btn[type=submit],#tab-sale>.btn[type=submit],#sh-manual>.btn[type=submit],#tab-adj>.btn[type=submit],.sticky-btn{position:static;box-shadow:none}
+    .panel input:not([type=checkbox]):not([type=file]),.panel select{min-height:44px}
+    /* ขายออก: บิลซ้าย · บิลวันนี้ขวา */
+    #tab-sale{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);column-gap:28px;align-items:start}
+    #tab-sale>*{grid-column:1}
+    #tab-sale>.bills-box{grid-column:2;grid-row:1 / span 40;margin-top:0;border-top:0;padding:0 0 0 24px;border-left:1px dashed var(--line);align-self:stretch}
+    #tab-sale #sale-pay{display:none}
+    .pay-btns{display:flex!important;gap:6px;flex-wrap:wrap}
+    .pay-btns button{flex:1;min-height:44px;white-space:nowrap;padding:0 8px;font-size:.9rem;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:600;cursor:pointer;color:var(--shelf)}
+    .pay-btns button[aria-pressed="true"]{background:var(--shelf);border-color:var(--shelf);color:#fff}
+    /* ปรับ/อนุมัติ: รายการรออนุมัติขวา */
+    #tab-adj{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;align-items:start}
+    #tab-adj>*{grid-column:1}
+    #tab-adj>#adj-pend-box{grid-column:2;grid-row:1 / span 40;margin:0;padding-left:24px;border-left:1px dashed var(--line)}
+    /* สรุปกะออโต้: ตาราง */
+    .auto-tools{display:flex;gap:10px;align-items:center;margin-bottom:10px}.auto-tools .chips{margin:0;flex:1}
+    #auto-q{max-width:240px;min-height:38px!important}
+    .at{width:100%;border-collapse:collapse;font-size:.9rem}
+    .at th{background:#F3F6F4;color:#3d4a43;font-weight:600;text-align:left;padding:8px;border-bottom:1px solid var(--line);position:sticky;top:0}
+    .at td{padding:7px 8px;border-bottom:1px solid #eef2ef;vertical-align:middle}
+    .at td.n,.at th.n{text-align:right}
+    .at tr.diff td{background:#FDF3F1}.at tr.wait td{background:#FFFBF0}.at tr.saved td{color:#9aa6a0}
+    .at td.adj{background:#FFF1CC!important}
+    .at small{display:block;color:var(--muted);font-size:.76rem}
+    .at input[data-a]{width:80px;min-height:34px!important;text-align:center;font-weight:700;padding:4px}
+    .at input[data-r]{width:100%;min-height:34px!important;font-size:.85rem;padding:4px 8px}
+    .at input[type=checkbox]{width:20px;height:20px}
+    .at .tg{font-size:.75rem;padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+    .at tr.diff .tg{color:var(--red)}.at tr.wait .tg{color:#8a6100}.at tr.ok .tg{color:var(--shelf)}
+    #tab-shift.auto-on{max-width:none}
+  }
   @media print{
     @page{size:A4;margin:12mm}
     body{background:#fff;font-size:11px}
@@ -485,18 +551,27 @@
       <strong>Happitat</strong>
       <span id="who"></span>
     </div>
+    <h1 class="desk-title" id="deskTitle">นับสต็อก</h1>
     <button type="button" class="ctx-chip" id="ctxChip">📍 <span id="ctxBooth">เลือกบูธ</span> · <span id="ctxShift">กะ</span> ▾</button>
     <div class="acts"><button id="qBadge" type="button" hidden style="background:var(--amber);color:var(--ink);border-color:var(--amber)">รอส่ง 0</button><button id="pwOpen" type="button" hidden>เปลี่ยนรหัส</button><button id="logoutBtn" type="button" hidden>ออกจากระบบ</button></div>
   </header>
   <nav class="tabs" role="tablist">
+    <div class="side-brand desk-only"><div class="av" id="sideAv">H</div><div><b>Happitat</b><small id="sideWho"></small></div></div>
+    <span class="side-grp desk-only" style="order:1">งานประจำวัน</span>
     <button role="tab" data-tab="count" aria-selected="true"><i>📦</i>นับสต็อก</button>
     <button role="tab" data-tab="sale" aria-selected="false" id="tabSaleBtn"><i>🛒</i>ขายออก</button>
     <button role="tab" data-tab="shift" aria-selected="false"><i>🔄</i>สรุปกะ</button>
     <button role="tab" data-tab="adj" aria-selected="false"><i>🔧</i>ปรับ/อนุมัติ<span id="adjBadge" class="tab-badge" hidden></span></button>
     <button role="tab" data-tab="more" aria-selected="false" id="tabMoreBtn"><i>☰</i>เพิ่มเติม</button>
-    <button role="tab" data-tab="report" aria-selected="false" class="sub-tab">ใบสรุปกะ</button>
-    <button role="tab" data-tab="stk" aria-selected="false" class="sub-tab">ใบตรวจนับ</button>
-    <button role="tab" data-tab="hist" aria-selected="false" class="sub-tab">ประวัติ</button>
+    <span class="side-grp desk-only" style="order:6">เอกสาร</span>
+    <button role="tab" data-tab="report" aria-selected="false" class="sub-tab"><i>📄</i>ใบสรุปกะ</button>
+    <button role="tab" data-tab="stk" aria-selected="false" class="sub-tab"><i>📋</i>ใบตรวจนับ</button>
+    <button role="tab" data-tab="hist" aria-selected="false" class="sub-tab"><i>🕘</i>ประวัติ</button>
+    <span class="side-grp desk-only adm-only" style="order:10" hidden>admin</span>
+    <a class="side-link desk-only adm-only" data-adm="usr-open" style="order:11" hidden><i>👥</i>ผู้ใช้ / รหัสผ่าน</a>
+    <a class="side-link desk-only adm-only" data-adm="bth-load" style="order:12" hidden><i>🏬</i>จัดการบูธ</a>
+    <a class="side-link desk-only adm-only" data-adm="sys-load" style="order:13" hidden><i>📊</i>สถานะระบบ</a>
+    <div class="side-foot desk-only"><a class="side-link" id="sidePw"><i>🔑</i>เปลี่ยนรหัสผ่าน</a><a class="side-link" id="sideOut"><i>🚪</i>ออกจากระบบ</a></div>
   </nav>
 
   <main>
@@ -588,7 +663,7 @@
       </div>
       <div id="auto-pane" hidden>
         <p class="hint" id="auto-info" style="margin:0 0 8px"></p>
-        <div class="chips" id="auto-chips"></div>
+        <div class="auto-tools"><div class="chips" id="auto-chips"></div><input id="auto-q" class="desk-only" placeholder="🔍 ค้นหาสินค้า" autocomplete="off"></div>
         <div id="auto-list"><div class="empty">กำลังคำนวณ…</div></div>
         <button type="button" class="btn sticky-btn" id="auto-save" disabled>บันทึกสรุปกะ</button>
       </div>
@@ -787,6 +862,7 @@
       <div class="row">
         <div class="field"><label for="sale-shift">กะ</label><select id="sale-shift" class="shift-select"></select></div>
         <div class="field"><label for="sale-pay">ชำระโดย</label>
+          <div class="pay-btns desk-only" id="payBtns"></div>
           <select id="sale-pay"><option>เงินสด</option><option>โอน / QR</option><option>บัตรเครดิต</option><option>อื่นๆ</option></select></div>
       </div>
       <div class="bill-add">
@@ -1186,6 +1262,7 @@ async function enterApp(){
   const p = S.profile;
   $('who').textContent = p.name + ' · ' + p.department + (p.role ? ' · ' + p.role : '');
   $('avatar').textContent = (p.name || 'H').trim().charAt(0);
+  $('sideAv').textContent = $('avatar').textContent; $('sideWho').textContent = p.name + ' · ' + (p.role || 'User');
   $('moreVer').textContent = p.name + ' (' + p.user + ')';
   $('login').classList.add('hidden'); $('app').classList.remove('hidden');
   // แท็บขายออกเปิดให้ทุกผู้ใช้
@@ -1216,6 +1293,7 @@ async function loadBooths(){
     S.booths = r.mine; S.allBooths = r.all; S.role = r.role || (r.admin ? 'admin' : 'user');
     S.canApprove = S.role !== 'user';
     $('sh-modes').hidden = !S.canApprove; if (!S.canApprove) setShMode('one');
+    $('sideWho').textContent = S.profile.name + ' · ' + (S.role === 'admin' ? 'admin' : S.role === 'supervisor' ? 'Supervisor' : 'User');
     $('who').textContent = S.profile.name + ' · ' + (S.role === 'admin' ? 'admin' : S.role === 'supervisor' ? 'Supervisor' : (S.profile.department || 'User'));
     $('adj-flow-note').textContent = S.canApprove
       ? 'คุณเป็น ' + (S.role === 'admin' ? 'admin' : 'Supervisor') + ': บันทึกแล้วตัดสต็อกทันที'
@@ -1361,6 +1439,7 @@ document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
   ['count','sale','shift','report','stk','adj','hist','more'].forEach(t => $('tab-'+t).classList.toggle('hidden', t !== b.dataset.tab));
   if (b.classList.contains('sub-tab')) $('tabMoreBtn').setAttribute('aria-selected', 'true');   // หน้าย่อยของ "เพิ่มเติม"
   $('ctxMenu').hidden = true; window.scrollTo(0, 0);
+  $('deskTitle').textContent = [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim() || 'Happitat';
   if (b.dataset.tab === 'adj') loadPending();
   if (b.dataset.tab === 'sale') loadBills();
 });
@@ -1983,7 +2062,8 @@ $('tab-sale').onsubmit = e => {
     booth: S.booth.id, shift: $('sale-shift').value, payment: $('sale-pay').value, remark: $('sale-remark').value.trim(),
     items: BILL.map(x => ({ code: x.code, desc: x.desc, qty: x.qty, price: x.price })), receipts: PHOTOS.slice()
   }, r => {
-    toast(r.queued ? 'เก็บบิลไว้ในเครื่อง จะส่งให้อัตโนมัติ' : 'บันทึกบิลแล้ว · ' + r.lines + ' รายการ · ' + fmtB(r.amount) + ' ฿');
+    r = r || {};
+    toast(r.queued ? 'เก็บบิลไว้ในเครื่อง จะส่งให้อัตโนมัติ' : (r.lines ? 'บันทึกบิลแล้ว · ' + r.lines + ' รายการ · ' + fmtB(r.amount) + ' ฿' : 'บันทึกบิลแล้ว'));
     BILL = []; renderBill(); setReceipt(); $('sale-remark').value = ''; if (!r.queued) loadBills();
     refreshToday(); $('sale-code').focus();
   });
@@ -2453,7 +2533,7 @@ function scanToBill(it){
 let AUTO = null, autoFilter = 'all', autoBusy = false;
 function setShMode(m){
   const auto = m === 'auto';
-  $('auto-pane').hidden = !auto; $('sh-manual').hidden = auto;
+  $('auto-pane').hidden = !auto; $('sh-manual').hidden = auto; $('tab-shift').classList.toggle('auto-on', auto);
   $('sh-mode-auto').setAttribute('aria-pressed', auto); $('sh-mode-one').setAttribute('aria-pressed', !auto);
   if (auto) loadAuto();
 }
@@ -2490,9 +2570,23 @@ function renderAuto(){
   $('auto-chips').innerHTML = Object.keys(lab).filter(k => k === 'all' || c[k]).map(k =>
     '<button type="button" data-f="' + k + '" aria-pressed="' + (autoFilter === k) + '">' + lab[k] + ' ' + c[k] + '</button>').join('');
   $('auto-chips').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { autoFilter = b.dataset.f; renderAuto(); });
-  const show = L.filter(x => autoFilter === 'all' || x.status === autoFilter);
+  const q = (($('auto-q') || {}).value || '').trim().toLowerCase();
+  const show = L.filter(x => (autoFilter === 'all' || x.status === autoFilter) && (!q || (x.code + ' ' + x.desc).toLowerCase().indexOf(q) > -1));
   const tag = x => x.status === 'saved' ? 'บันทึกแล้ว' : x.status === 'wait' ? 'ยังไม่นับ' : x.status === 'ok' ? '✓ ตรง ' + x.actual :
     (Number(x.actual) - x.expected > 0 ? 'เกิน +' : 'ขาด ') + (Number(x.actual) - x.expected);
+  if (DESK.matches && show.length) {
+    $('auto-list').innerHTML = '<table class="at"><thead><tr><th></th><th>สินค้า</th><th class="n">ยกมา</th><th class="n">+รับเติม</th><th class="n">−ขาย</th><th class="n">±ปรับ</th><th class="n">=ควรเหลือ</th><th class="n">นับได้</th><th>สถานะ</th><th style="width:22%">หมายเหตุ</th></tr></thead><tbody>' +
+      show.map(x => { const i = L.indexOf(x);
+        return '<tr class="' + x.status + '"><td>' + (x.saved ? '' : '<input type="checkbox" data-c="' + i + '"' + (x.pick ? ' checked' : '') + (x.status === 'wait' ? ' disabled' : '') + '>') + '</td>' +
+          '<td>' + esc(x.desc || x.code) + '<small>' + esc(x.code) + (x.countedAt ? ' · นับ ' + esc(x.countedAt) + (x.salesAfter ? ' (−ขายหลังนับ ' + x.salesAfter + ')' : '') : '') + '</small></td>' +
+          '<td class="n">' + x.opening + '</td><td class="n">' + x.restock + '</td><td class="n">' + x.sales + '</td>' +
+          '<td class="n' + (x.adjust ? ' adj' : '') + '" title="' + esc(Object.keys(x.adjustBy || {}).map(k => k + ' ' + x.adjustBy[k]).join(' · ')) + '">' + (x.adjust > 0 ? '+' : '') + x.adjust + '</td>' +
+          '<td class="n"><b>' + x.expected + '</b></td>' +
+          '<td class="n">' + (x.saved ? esc(x.actual) : '<input type="number" min="0" step="1" data-a="' + i + '" value="' + esc(x.actual) + '" placeholder="–">') + '</td>' +
+          '<td><span class="tg">' + tag(x) + '</span></td>' +
+          '<td>' + (x.status === 'diff' ? '<input data-r="' + i + '" placeholder="หมายเหตุ (บังคับ)" value="' + esc(x.remark) + '">' : '') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  } else
   $('auto-list').innerHTML = show.length ? show.map(x => {
     const i = L.indexOf(x), dis = x.saved ? ' disabled' : '';
     return '<div class="ac ' + x.status + '" data-i="' + i + '"><div class="r1"><div><b>' + esc(x.desc || x.code) + '</b><small>' + esc(x.code) +
@@ -2505,7 +2599,7 @@ function renderAuto(){
         (x.status === 'diff' ? '<input class="rm" data-r="' + i + '" placeholder="หมายเหตุ (บังคับ) เช่น กล่องแตก" value="' + esc(x.remark) + '">' : '')) + '</div>';
   }).join('') : '<div class="empty">' + (L.length ? 'ไม่มีรายการในตัวกรองนี้' : 'ไม่มีความเคลื่อนไหวของสินค้าในกะนี้') + '</div>';
   $('auto-list').querySelectorAll('[data-a]').forEach(inp => inp.onchange = () => {
-    const x = L[+inp.dataset.a]; x.actual = inp.value.trim(); x.pick = x.actual !== ''; renderAuto();
+    const x = L[+inp.dataset.a]; x.actual = inp.value.trim(); x.pick = x.actual !== ''; setTimeout(renderAuto, 0);
   });
   $('auto-list').querySelectorAll('[data-c]').forEach(cb => cb.onchange = () => { L[+cb.dataset.c].pick = cb.checked; autoBtn(); });
   $('auto-list').querySelectorAll('[data-r]').forEach(r => r.oninput = () => { L[+r.dataset.r].remark = r.value; });
@@ -2625,6 +2719,35 @@ $('be-send').onclick = async () => {
   } catch(e){ toast(e.message, true); }
   finally { btn.disabled = false; btn.textContent = label; }
 };
+
+
+/* ---------- คอมพิวเตอร์ (จอกว้าง): เมนูซ้าย ปุ่มช่องทางชำระ แป้นพิมพ์ลัด ---------- */
+const DESK = window.matchMedia('(min-width:1024px)');
+DESK.addEventListener && DESK.addEventListener('change', () => { if (AUTO) renderAuto(); });
+document.querySelectorAll('nav.tabs [data-adm]').forEach(a => a.onclick = () => {
+  document.querySelector('nav.tabs button[data-tab=hist]').click();
+  setTimeout(() => { const t = $(a.dataset.adm); if (!(a.dataset.adm === 'usr-open' && !$('usr-box').hidden)) t.click(); t.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 50);
+});
+$('sidePw').onclick = () => $('pwOpen').click();
+$('sideOut').onclick = () => $('logoutBtn').click();
+(function payButtons(){
+  const sel = $('sale-pay'), box = $('payBtns');
+  box.innerHTML = [...sel.options].map(o => '<button type="button" data-pay="' + esc(o.value) + '">' + esc(o.text) + '</button>').join('');
+  const sync = () => box.querySelectorAll('[data-pay]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pay === sel.value));
+  box.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => { sel.value = b.dataset.pay; sel.dispatchEvent(new Event('change')); sync(); });
+  sel.addEventListener('change', sync); sync();
+})();
+// ยิงเครื่องสแกน USB / พิมพ์รหัสแล้วกด Enter = เข้าบิลทันที · Ctrl+Enter = บันทึกบิล
+$('sale-code').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.ctrlKey) return;
+  e.preventDefault();
+  const it = resolveItem('sale-code'); if (!it) return toast('ไม่พบสินค้า ' + $('sale-code').value, true);
+  if ($('sale-qty').value && Number($('sale-qty').value) > 1) { $('sale-price').value = $('sale-price').value || String(it.price || '').split(',').join(''); addToBill(); }
+  else scanToBill(it);
+  $('sale-code').focus();
+});
+$('tab-sale').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $('tab-sale').requestSubmit(); } });
+$('auto-q').addEventListener('input', () => renderAuto());
 
 /* ---------- จัดการบูธ (admin) ---------- */
 let BTH = [], bthEdit = null;
