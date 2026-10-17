@@ -891,7 +891,7 @@
           <div class="field"><label for="sale-price" class="req">ราคาต่อหน่วย (บาท)</label><input id="sale-price" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00">
             <div class="field-err" id="sale-price-err"></div></div>
         </div>
-        <button type="button" class="btn ghost" id="sale-add" style="width:100%">+ เพิ่มลงบิล</button>
+        <button type="button" class="btn ghost" id="sale-add" style="width:100%">+ เพิ่ม Code Item</button>
       </div>
       <div class="bill-list-h">รายการในบิล (<span id="bill-n">0</span>)</div>
       <div class="bill-list" id="bill-rows"><div class="empty">ยังไม่มีสินค้าในบิล</div></div>
@@ -2098,7 +2098,7 @@ $('tab-sale').onsubmit = e => {
   e.preventDefault();
   // ใส่สินค้าไว้ในช่องแต่ยังไม่กดเพิ่ม: เพิ่มให้เองก่อนบันทึก
   if ($('sale-code').value.trim() && !addToBill()) return;
-  if (!BILL.length) { $('sale-code').focus(); return toast('ยังไม่มีสินค้าในบิล ใส่สินค้าแล้วกด "+ เพิ่มลงบิล"', true); }
+  if (!BILL.length) { $('sale-code').focus(); return toast('ยังไม่มีสินค้าในบิล ใส่สินค้าแล้วกด "+ เพิ่ม Code Item"', true); }
   if (!needBooth()) return;
   submitWith(e.target, 'saveSaleBill', {
     booth: S.booth.id, shift: $('sale-shift').value, payment: $('sale-pay').value, remark: $('sale-remark').value.trim(),
@@ -2572,7 +2572,7 @@ document.querySelectorAll('#tab-more [data-go]').forEach(b => b.onclick = () => 
 /* ขายออก: สแกนแล้วเข้าบิลทันที (จำนวน 1) สแกนซ้ำ = เพิ่มจำนวน */
 function scanToBill(it){
   const price = Number(String(it.price || '').split(',').join(''));
-  if (!(price > 0)) { $('sale-qty').value = 1; setTimeout(() => $('sale-price').focus(), 400); toast('ใส่ราคาแล้วกด + เพิ่มลงบิล', true); return; }
+  if (!(price > 0)) { $('sale-qty').value = 1; setTimeout(() => $('sale-price').focus(), 400); toast('ใส่ราคาแล้วกด + เพิ่ม Code Item', true); return; }
   const same = BILL.find(x => x.code === it.code && x.price === price);
   if (same) same.qty++; else BILL.push({ code: it.code, desc: it.desc, qty: 1, price: price });
   $('sale-code').value = ''; $('sale-code-desc').textContent = ''; $('sale-code-desc').className = 'item-desc';
