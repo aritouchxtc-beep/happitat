@@ -218,6 +218,7 @@
 
   /* ---------- คอมพิวเตอร์ / แท็บเล็ตแนวนอน (จอกว้าง ≥ 1024px) — มือถือไม่ได้รับผล ---------- */
   .desk-only{display:none!important}
+  header.bar .desk-title{display:none}
   @media (min-width:1024px){
     .desk-only{display:revert!important}
     a.side-link.desk-only{display:flex!important}
@@ -274,6 +275,7 @@
     .at tr.diff td{background:#FDF3F1}.at tr.wait td{background:#FFFBF0}.at tr.saved td{color:#9aa6a0}
     .at td.adj{background:#FFF1CC!important}
     .at small{display:block;color:var(--muted);font-size:.76rem}
+    .at small.from{font-size:.72rem}.at small.gap{color:#9A6B00;font-weight:600}
     .at input[data-a]{width:80px;min-height:34px!important;text-align:center;font-weight:700;padding:4px}
     .at input[data-r]{width:100%;min-height:34px!important;font-size:.85rem;padding:4px 8px}
     .at input[type=checkbox]{width:20px;height:20px}
@@ -328,6 +330,10 @@
   .booth-strip b{font-size:1rem}
   .booth-strip .btn{width:auto;padding:8px 14px;white-space:nowrap;flex:none}
   .booth-list{display:grid;gap:10px;margin-top:6px}
+  .booth-opt[hidden]{display:none!important}
+  .stock-warn{background:#FFF6E2;border-left:4px solid var(--amber);border-radius:10px;padding:10px 12px;margin:8px 0 10px;font-size:.92rem;line-height:1.45}
+  .stock-warn b{display:block;margin-bottom:2px}
+  .stock-warn .btn{margin-top:8px;padding:10px 14px;font-size:.92rem;width:auto}
   .booth-opt{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
     background:#fff;border:1.5px solid var(--line);border-radius:var(--radius-s);padding:14px 16px}
   .booth-opt:hover,.booth-opt:focus-visible{border-color:var(--shelf);background:var(--mist)}
@@ -528,6 +534,8 @@
     <h2 class="pw-title">เลือกบูธที่ทำงาน</h2>
     <p class="pw-sub">ทุกรายการที่บันทึกจะผูกกับบูธที่เลือก เปลี่ยนบูธได้ตลอดจากแถบด้านบน</p>
     <hr class="perf">
+    <input type="search" id="boothQ" placeholder="🔍 ค้นหาบูธ (ชื่อ รหัส หรือโซน)" autocomplete="off" hidden
+      style="width:100%;margin:0 0 10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit">
     <div class="booth-list" id="boothList"></div>
     <div class="foot"><button type="button" class="linkbtn" id="boothCancel">ยกเลิก</button></div>
   </div>
@@ -560,11 +568,11 @@
     <span class="side-grp desk-only" style="order:1">งานประจำวัน</span>
     <button role="tab" data-tab="count" aria-selected="true"><i>📦</i>นับสต็อก</button>
     <button role="tab" data-tab="sale" aria-selected="false" id="tabSaleBtn"><i>🛒</i>ขายออก</button>
-    <button role="tab" data-tab="shift" aria-selected="false"><i>🔄</i>สรุปกะ</button>
+    <button role="tab" data-tab="shift" aria-selected="false"><i>🔄</i>สรุปสต็อก</button>
     <button role="tab" data-tab="adj" aria-selected="false"><i>🔧</i>ปรับ/อนุมัติ<span id="adjBadge" class="tab-badge" hidden></span></button>
     <button role="tab" data-tab="more" aria-selected="false" id="tabMoreBtn"><i>☰</i>เพิ่มเติม</button>
     <span class="side-grp desk-only" style="order:6">เอกสาร</span>
-    <button role="tab" data-tab="report" aria-selected="false" class="sub-tab"><i>📄</i>ใบสรุปกะ</button>
+    <button role="tab" data-tab="report" aria-selected="false" class="sub-tab"><i>📄</i>ใบส่งกะ (เงิน)</button>
     <button role="tab" data-tab="stk" aria-selected="false" class="sub-tab"><i>📋</i>ใบตรวจนับ</button>
     <button role="tab" data-tab="hist" aria-selected="false" class="sub-tab"><i>🕘</i>ประวัติ</button>
     <span class="side-grp desk-only adm-only" style="order:10" hidden>admin</span>
@@ -584,7 +592,7 @@
     <section class="panel hidden" id="tab-more">
       <h2>เพิ่มเติม</h2>
       <div class="menu-list">
-        <button type="button" data-go="report"><span>📄</span><b>ใบสรุปกะ / พิมพ์</b><i>›</i></button>
+        <button type="button" data-go="report"><span>📄</span><b>ใบส่งกะ (เงิน) / พิมพ์</b><i>›</i></button>
         <button type="button" data-go="stk"><span>📋</span><b>ใบตรวจนับสต็อก</b><i>›</i></button>
         <button type="button" data-go="hist"><span>🕘</span><b>ประวัติ</b><i>›</i></button>
         <button type="button" data-go="hist" data-admin="usr-open" class="adm-only" hidden><span>👥</span><b>จัดการผู้ใช้ / รหัสผ่าน</b><i>›</i></button>
@@ -650,7 +658,7 @@
 
     <!-- สรุปกะ -->
     <form class="panel hidden" id="tab-shift" action="javascript:void(0)">
-      <h2>สรุปยอดปิดกะ</h2>
+      <h2>สรุปสต็อกปิดกะ</h2>
       <p class="sub">บันทึกลงชีต shift_summary ระบบคำนวณยอดที่ควรเหลือและส่วนต่างให้</p>
       <div class="row">
         <div class="field"><label for="sh-date" class="req">วันที่</label><input id="sh-date" type="date" required></div>
@@ -658,14 +666,15 @@
           <select id="sh-shift" class="shift-select" required></select></div>
       </div>
       <div class="mode-switch" id="sh-modes" hidden>
-        <button type="button" class="mode auto" id="sh-mode-auto">⚡ สรุปกะออโต้</button>
+        <button type="button" class="mode auto" id="sh-mode-auto">⚡ สรุปสต็อกออโต้</button>
         <button type="button" class="mode" id="sh-mode-one" aria-pressed="true">✍️ ทีละรายการ</button>
       </div>
       <div id="auto-pane" hidden>
         <p class="hint" id="auto-info" style="margin:0 0 8px"></p>
+        <div id="auto-warn" class="stock-warn" hidden></div>
         <div class="auto-tools"><div class="chips" id="auto-chips"></div><input id="auto-q" class="desk-only" placeholder="🔍 ค้นหาสินค้า" autocomplete="off"></div>
         <div id="auto-list"><div class="empty">กำลังคำนวณ…</div></div>
-        <button type="button" class="btn sticky-btn" id="auto-save" disabled>บันทึกสรุปกะ</button>
+        <button type="button" class="btn sticky-btn" id="auto-save" disabled>บันทึกสรุปสต็อก</button>
       </div>
       <div id="sh-manual">
       <div class="field">
@@ -692,14 +701,14 @@
         <div id="sh-diffbox"><small>ส่วนต่าง</small><b id="sh-diff">–</b></div>
       </div>
       <div class="field"><label for="sh-remark" id="sh-remark-label">หมายเหตุ</label><textarea id="sh-remark" rows="2" placeholder="ถ้ายอดไม่ตรง ต้องระบุสาเหตุ"></textarea><div class="field-err" id="sh-remark-err"></div></div>
-      <button class="btn" type="submit">บันทึกสรุปกะ</button>
+      <button class="btn" type="submit">บันทึกสรุปสต็อก</button>
       </div>
     </form>
 
     <!-- ใบสรุปยอดกะ -->
     <form class="panel hidden" id="tab-report" action="javascript:void(0)">
       <div class="rp-head">
-        <div><h2>ใบสรุปยอดกะประจำบูธ</h2><p class="sub" style="margin:0">Booth shift summary report</p></div>
+        <div><h2>ใบส่งกะ (ยอดเงิน) ประจำบูธ</h2><p class="sub" style="margin:0">Booth shift summary report</p></div>
         <div class="rp-doc"><small>เลขที่เอกสาร</small><b id="rp-doc">–</b></div>
       </div>
       <div class="row" style="margin-top:16px">
@@ -709,6 +718,7 @@
         <div class="field"><label for="rp-shift" class="req">กะการทำงาน</label><select id="rp-shift" class="shift-select"></select><div class="field-err" id="rp-shift-err"></div></div>
       </div>
       <button type="button" class="btn ghost no-print" id="rp-load" style="width:100%">โหลดข้อมูลกะ</button>
+      <div id="rp-stock" class="stock-warn no-print" hidden></div>
 
       <div id="rp-body" class="hidden">
         <div class="rp-meta">
@@ -759,7 +769,7 @@
 
         <div class="rp-actions no-print">
           <button type="button" class="btn ghost" id="rp-print" style="width:100%">พิมพ์ / บันทึก PDF</button>
-          <button class="btn" type="submit">บันทึกใบสรุปกะ</button>
+          <button class="btn" type="submit">บันทึกใบส่งกะ</button>
         </div>
       </div>
     </form>
@@ -911,10 +921,10 @@
       <div class="row">
         <select id="hist-which">
           <option value="inv">นับสต็อก (inventory_Electric)</option>
-          <option value="shift">สรุปกะ (shift_summary)</option>
+          <option value="shift">สรุปสต็อก (shift_summary)</option>
           <option value="adj">ปรับสต็อก (stock_adjustments)</option>
           <option value="sale" id="histSaleOpt">ขายออก (inventory_cashier)</option>
-          <option value="report">ใบสรุปกะ (shift_report)</option>
+          <option value="report">ใบส่งกะ (shift_report)</option>
           <option value="count">ใบตรวจนับ (stock_count)</option>
         </select>
         <select id="hist-booth"><option value="">บูธนี้</option><option value="ALL" id="histAllOpt" hidden>ทุกบูธ (admin)</option></select>
@@ -1055,9 +1065,12 @@ function api(fn, ...args){
     return new Promise((resolve, reject) => {
       google.script.run.withSuccessHandler(resolve).withFailureHandler(err => {
         const m = (err && err.message) || String(err);
+        if (/กำลังบันทึกรายการของคนอื่น|too many|simultaneous|invoked|timed out|Lock timeout|Service unavailable|ไม่สามารถใช้บริการ/i.test(m)) {
+          const e = new Error('ระบบมีผู้ใช้พร้อมกันมาก กำลังลองใหม่…'); e.hiccup = true; e.kind = 'BUSY'; e.detail = m.slice(0, 160); return reject(e);
+        }
         reject(/NetworkError|HTTP 0|Failed to fetch|network/i.test(m) ? netError() : fail(m));
       }).rpc(fn, args);
-    }).then(done);
+    }).then(done, err => { if (err.hiccup) logHiccup(fn, err); throw err; });
   }
   if (!validApi(apiUrl())) {
     $('apiBox').hidden = false;
@@ -1085,7 +1098,7 @@ function api(fn, ...args){
     }
     throw serverHiccup(r.status, txt);                        // Google ตอบเป็นหน้าเว็บ (ไม่ใช่ข้อมูล)
   }), () => { throw netError(); });
-  const wait = k => new Promise(r => setTimeout(r, [0, 1200, 2500, 5000][k] + Math.random() * 800));  // เว้นจังหวะ กันทุกเครื่องยิงพร้อมกัน
+  const wait = k => new Promise(r => setTimeout(r, [0, 1500, 3500, 7000][k] + Math.random() * 2500));  // เว้นจังหวะ กันทุกเครื่องยิงพร้อมกัน
   const attempt = k => once().catch(err => {
     if (k + 1 < tries && (err.net || err.hiccup) && !err.fatal && navigator.onLine !== false) return wait(k + 1).then(() => attempt(k + 1));
     throw err;
@@ -1345,8 +1358,20 @@ function showBoothPicker(cancelable){
     '<p class="hint" style="text-align:center;margin-top:6px">ตอนนี้คุณมีสิทธิ์บูธเดียว ถ้าต้องการบูธเพิ่ม ให้ผู้ดูแลเพิ่มแถวในชีต booths ' +
     'หรือใส่รหัสพนักงานของคุณในคอลัมน์ Staff IDs</p>');
   $('boothCancel').hidden = !cancelable || !S.booth;
+  const q = $('boothQ'); q.value = ''; q.hidden = S.booths.length <= 8;   // บูธเยอะ: มีช่องค้นหา
+  $('boothList').querySelectorAll('.booth-opt').forEach(el => el.hidden = false);
   $('app').classList.add('hidden'); $('boothpick').classList.remove('hidden');
+  if (!q.hidden && !('ontouchstart' in window)) setTimeout(() => q.focus(), 50);
 }
+$('boothQ').oninput = () => {
+  const k = $('boothQ').value.trim().toLowerCase();
+  $('boothList').querySelectorAll('.booth-opt').forEach(el => { el.hidden = !!k && el.textContent.toLowerCase().indexOf(k) < 0 && el.dataset.id.toLowerCase().indexOf(k) < 0; });
+};
+$('boothQ').onkeydown = e => {
+  if (e.key !== 'Enter') return;
+  const vis = [...$('boothList').querySelectorAll('.booth-opt')].filter(el => !el.hidden);
+  if (vis.length === 1) vis[0].click();
+};
 $('boothChange').onclick = () => showBoothPicker(true);
 $('qBadge').onclick = () => flushQueue(true);
 $('shiftName').onclick = () => showShiftPicker();
@@ -1830,7 +1855,7 @@ function updateQBadge(){
   const q = qGet(), b = $('qBadge'); if (!b) return;
   b.hidden = !q.length; b.textContent = 'รอส่ง ' + q.length;
 }
-const Q_LABEL = { saveShiftAuto: 'สรุปกะออโต้', saveCount: 'นับสต็อก', saveSale: 'ขายออก', saveSaleBill: 'บิลขาย', saveShift: 'สรุปกะ', saveAdjustment: 'ปรับสต็อก' };
+const Q_LABEL = { saveShiftAuto: 'สรุปสต็อกออโต้', saveCount: 'นับสต็อก', saveSale: 'ขายออก', saveSaleBill: 'บิลขาย', saveShift: 'สรุปกะ', saveAdjustment: 'ปรับสต็อก' };
 let flushing = false;
 async function flushQueue(manual){
   if (flushing || !S.token) return;
@@ -1856,8 +1881,9 @@ async function flushQueue(manual){
     if (sent) toast('ส่งรายการที่ค้างในเครื่องแล้ว ' + sent + ' รายการ');
   }
 }
-window.addEventListener('online', () => setTimeout(flushQueue, 1500));
-setInterval(() => { if (navigator.onLine !== false) flushQueue(); }, 30000);
+// ส่งรายการค้าง: เว้นจังหวะแบบสุ่ม กันหลายสิบเครื่องส่งพร้อมกันหลังเน็ตกลับมา
+window.addEventListener('online', () => setTimeout(flushQueue, 1500 + Math.random() * 8000));
+(function flushLoop(){ setTimeout(() => { if (navigator.onLine !== false) flushQueue(); flushLoop(); }, 25000 + Math.random() * 15000); })();
 setInterval(() => { if (S.canApprove && S.token && !document.hidden) loadPending(); }, 60000);   // แจ้งคำขอรออนุมัติ
 
 async function submitWith(form, fn, payload, onDone){
@@ -2166,7 +2192,7 @@ $('tab-shift').onsubmit = e => {
     opening: n('sh-open'), restock: n('sh-restock'), sales: n('sh-sales'), adjust: n('sh-adjust'), actual: n('sh-actual'),
     remark: $('sh-remark').value.trim()
   }, r => {
-    toast(r.diff === 0 ? 'บันทึกสรุปกะแล้ว ยอดตรง' : 'บันทึกสรุปกะแล้ว ส่วนต่าง ' + r.diff, r.diff !== 0);
+    toast(r.diff === 0 ? 'บันทึกสรุปสต็อกแล้ว ยอดตรง' : 'บันทึกสรุปสต็อกแล้ว ส่วนต่าง ' + r.diff, r.diff !== 0);
     ['sh-code','sh-actual','sh-remark'].forEach(id => $(id).value = '');
     ['sh-open','sh-restock','sh-sales','sh-adjust'].forEach(id => $(id).value = 0);
     $('sh-code-desc').textContent = ''; $('sh-code-desc').className = 'item-desc'; calcShift();
@@ -2207,6 +2233,15 @@ function calcReport(){
 
 function renderReport(r){
   RP = r;
+  const st = r.stock, box = $('rp-stock');
+  if (st && !st.saved && st.salesPcs > 0) {
+    box.innerHTML = '<b>⚠ ' + esc(st.shift) + ' ' + esc(st.date) + ' ยังไม่ได้สรุปสต็อก</b>ใบส่งกะบันทึกเฉพาะยอดเงิน · ต้องทำ <b style="display:inline">สรุปสต็อก</b> ด้วย (ขาย ' + st.salesPcs + ' ชิ้น ' + st.salesItems + ' รายการ) ' +
+      'ไม่อย่างนั้นยอดยกมาของกะถัดไปจะไม่มีหลักฐานยอดนับปิดกะ' +
+      (st.canApprove ? '<br><button type="button" class="btn ghost" id="rp-gostock">ไปสรุปสต็อกออโต้</button>' : '<br>แจ้ง Supervisor ให้สรุปสต็อกกะนี้');
+    box.hidden = false; const g = $('rp-gostock'); if (g) g.onclick = () => goStockSummary(st.date, st.shift);
+  } else if (st && st.saved) { box.innerHTML = '✓ สรุปสต็อกกะนี้แล้ว ' + st.saved + ' รายการ'; box.hidden = false; box.style.borderLeftColor = 'var(--shelf)'; box.style.background = 'var(--mist)'; }
+  else box.hidden = true;
+  if (!(st && st.saved)) { box.style.borderLeftColor = ''; box.style.background = ''; }
   $('rp-doc').textContent = r.docNo;
   $('rp-time').textContent = r.start ? r.start + ' – ' + r.end + ' น.' : 'ยังไม่มีรายการขาย';
   $('rp-staff').textContent = r.staff.length ? r.staff.join(', ') : '–';
@@ -2276,7 +2311,7 @@ $('tab-report').onsubmit = e => {
     date: RP.date, shift: RP.shift, float: $('rp-float').value.trim(), cashActual: $('rp-actual').value.trim(),
     remark: $('rp-remark').value.trim(), supervisor: $('rp-sup').value.trim()
   }, r => {
-    toast((r.updated ? 'แก้ไขใบสรุปกะแล้ว · ' : 'บันทึกใบสรุปกะแล้ว · ') + r.docNo, r.variance !== 0);
+    toast((r.updated ? 'แก้ไขใบส่งกะแล้ว · ' : 'บันทึกใบส่งกะแล้ว · ') + r.docNo + (RP.stock && !RP.stock.saved && RP.stock.salesPcs ? ' · อย่าลืมสรุปสต็อกกะนี้' : ''), r.variance !== 0 || !!(RP.stock && !RP.stock.saved && RP.stock.salesPcs));
     $('rp-saved').textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH') + ' ถ้าบันทึกอีกครั้งจะเป็นการแก้ไขใบเดิม';
   });
 };
@@ -2487,7 +2522,7 @@ $('usr-q').addEventListener('keydown', e => { if (e.key === 'Enter') { e.prevent
 
 
 /* ---------- ตรวจว่า Code.gs ที่ Deploy ตรงกับหน้าเว็บนี้ ---------- */
-const SERVER_NEED = '2026-10-13';
+const SERVER_NEED = '2026-10-17';
 function oldServer(v){
   if (document.getElementById('srvWarn')) return;
   const d = document.createElement('div'); d.id = 'srvWarn';
@@ -2547,6 +2582,13 @@ function scanToBill(it){
 
 /* ---------- สรุปกะออโต้ (Supervisor / admin) ---------- */
 let AUTO = null, autoFilter = 'all', autoBusy = false;
+/** ไปหน้าสรุปสต็อกออโต้ของวัน/กะที่ระบุ */
+function goStockSummary(date, shift){
+  const p = String(date).split('/'); if (p.length === 3) $('sh-date').value = p[2] + '-' + p[1] + '-' + p[0];
+  $('sh-shift').value = shift;
+  const t = document.querySelector('nav.tabs button[data-tab=shift]'); if (t) t.click();
+  setTimeout(() => { if (S.canApprove) setShMode('auto'); else { setShMode('one'); toast('สรุปสต็อกออโต้ใช้ได้เฉพาะ Supervisor / admin', true); } scrollTo(0, 0); }, 50);
+}
 function setShMode(m){
   const auto = m === 'auto';
   $('auto-pane').hidden = !auto; $('sh-manual').hidden = auto; $('tab-shift').classList.toggle('auto-on', auto);
@@ -2559,7 +2601,7 @@ $('sh-mode-one').onclick = () => setShMode('one');
 async function loadAuto(){
   if (!needBooth() || autoBusy) return;
   const date = isoToThai($('sh-date').value), shift = $('sh-shift').value;
-  autoBusy = true; AUTO = null;
+  autoBusy = true; AUTO = null; $('auto-warn').hidden = true;
   $('auto-list').innerHTML = '<div class="empty">กำลังคำนวณทุกสินค้า…</div>'; $('auto-chips').innerHTML = ''; $('auto-save').disabled = true;
   const t0 = performance.now();
   try {
@@ -2568,6 +2610,13 @@ async function loadAuto(){
     $('auto-info').textContent = AUTO.booth + ' · ' + shift + ' ' + date + ' · นับได้จริงใช้ยอดนับล่าสุดในแท็บนับสต็อกช่วง ' + AUTO.window +
       ' · ใช้เวลา ' + ((performance.now() - t0) / 1000).toFixed(1) + ' วิ';
     autoFilter = AUTO.summary.diff ? 'diff' : 'all';
+    const pv = AUTO.prev, w = $('auto-warn');
+    if (pv && !pv.saved && pv.salesPcs > 0) {
+      w.innerHTML = '<b>⚠ ' + esc(pv.shift) + ' ' + esc(pv.date) + ' ยังไม่ได้สรุปสต็อก</b>มีขาย ' + pv.salesPcs + ' ชิ้น (' + pv.salesItems + ' รายการ) · ' +
+        'ยอดยกมาด้านล่างระบบหักยอดของกะนั้นให้แล้ว แต่ควรสรุปสต็อกกะนั้นด้วย เพื่อให้มีหลักฐานและยอดนับปิดกะ' +
+        '<br><button type="button" class="btn ghost" id="auto-goprev">ไปสรุปสต็อก ' + esc(pv.shift) + ' ' + esc(pv.date) + '</button>';
+      w.hidden = false; $('auto-goprev').onclick = () => goStockSummary(pv.date, pv.shift);
+    } else w.hidden = true;
     renderAuto();
   } catch(e){ $('auto-list').innerHTML = '<div class="empty">' + esc(e.message) + ' <button type="button" class="linkbtn" id="auto-retry">ลองอีกครั้ง</button></div>';
     const r = $('auto-retry'); if (r) r.onclick = loadAuto; }
@@ -2594,7 +2643,8 @@ function renderAuto(){
     $('auto-list').innerHTML = '<table class="at"><thead><tr><th></th><th>สินค้า</th><th class="n">ยกมา</th><th class="n">+รับเติม</th><th class="n">−ขาย</th><th class="n">±ปรับ</th><th class="n">=ควรเหลือ</th><th class="n">นับได้</th><th>สถานะ</th><th style="width:22%">หมายเหตุ</th></tr></thead><tbody>' +
       show.map(x => { const i = L.indexOf(x);
         return '<tr class="' + x.status + '"><td>' + (x.saved ? '' : '<input type="checkbox" data-c="' + i + '"' + (x.pick ? ' checked' : '') + (x.status === 'wait' ? ' disabled' : '') + '>') + '</td>' +
-          '<td>' + esc(x.desc || x.code) + '<small>' + esc(x.code) + (x.countedAt ? ' · นับ ' + esc(x.countedAt) + (x.salesAfter ? ' (−ขายหลังนับ ' + x.salesAfter + ')' : '') : '') + '</small></td>' +
+          '<td>' + esc(x.desc || x.code) + '<small>' + esc(x.code) + (x.countedAt ? ' · นับ ' + esc(x.countedAt) + (x.salesAfter ? ' (−ขายหลังนับ ' + x.salesAfter + ')' : '') : '') + '</small>' +
+            (x.openingFrom ? '<small class="from' + (/ยังไม่สรุป/.test(x.openingFrom) ? ' gap' : '') + '">ยกมาจาก ' + esc(x.openingFrom) + '</small>' : '') + '</td>' +
           '<td class="n">' + x.opening + '</td><td class="n">' + x.restock + '</td><td class="n">' + x.sales + '</td>' +
           '<td class="n' + (x.adjust ? ' adj' : '') + '" title="' + esc(Object.keys(x.adjustBy || {}).map(k => k + ' ' + x.adjustBy[k]).join(' · ')) + '">' + (x.adjust > 0 ? '+' : '') + x.adjust + '</td>' +
           '<td class="n"><b>' + x.expected + '</b></td>' +
@@ -2623,7 +2673,7 @@ function renderAuto(){
 }
 function autoBtn(){
   const n = AUTO ? AUTO.list.filter(x => x.pick && !x.saved && x.status !== 'wait').length : 0;
-  $('auto-save').disabled = !n; $('auto-save').textContent = n ? 'บันทึกสรุปกะ ' + n + ' รายการ' : 'เลือกสินค้าที่จะบันทึก';
+  $('auto-save').disabled = !n; $('auto-save').textContent = n ? 'บันทึกสรุปสต็อก ' + n + ' รายการ' : 'เลือกสินค้าที่จะบันทึก';
 }
 $('auto-save').onclick = async () => {
   const rows = AUTO.list.filter(x => x.pick && !x.saved && x.status !== 'wait');
@@ -2635,7 +2685,7 @@ $('auto-save').onclick = async () => {
     rows: rows.map(x => ({ code: x.code, desc: x.desc, opening: x.opening, restock: x.restock, sales: x.sales, adjust: x.adjust || 0, actual: Number(x.actual), remark: x.remark || '' })) };
   try {
     const r = await api('saveShiftAuto', S.token, payload);
-    toast('บันทึกสรุปกะแล้ว ' + r.saved + ' รายการ' + (r.skipped ? ' · ข้าม ' + r.skipped + ' (บันทึกไว้แล้ว)' : '') + (r.diffs ? ' · ไม่ตรง ' + r.diffs : ''));
+    toast('บันทึกสรุปสต็อกแล้ว ' + r.saved + ' รายการ' + (r.skipped ? ' · ข้าม ' + r.skipped + ' (บันทึกไว้แล้ว)' : '') + (r.diffs ? ' · ไม่ตรง ' + r.diffs : ''));
     loadAuto();
   } catch(e){
     if (e.net || e.hiccup) { const q = qGet(); q.push({ fn: 'saveShiftAuto', payload: payload, user: S.profile.user, booth: S.booth.id }); qSet(q);
@@ -2801,6 +2851,41 @@ $('bth-save').onclick = async () => {
 };
 
 /* ---------- สถานะระบบ (admin) ---------- */
+function mb(x){ return x >= 1073741824 ? (x / 1073741824).toFixed(1) + ' GB' : Math.round(x / 1048576) + ' MB'; }
+function capBar(pct, label, sub){
+  const c = pct >= 85 ? 'var(--red)' : pct >= 70 ? 'var(--amber)' : 'var(--shelf)';
+  return '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + label + '</b><b style="color:' + c + '">' + pct + '%</b></div>' +
+    '<div style="height:10px;background:#E7ECE9;border-radius:6px;overflow:hidden;margin:4px 0"><div style="height:100%;width:' + Math.min(100, pct) + '%;background:' + c + '"></div></div>' +
+    '<small class="hint">' + sub + '</small></div>';
+}
+function capHtml(cap, hours){
+  if (!cap) return '<p class="hint">ระบบหลังบ้านยังเป็นเวอร์ชันเก่า (ไม่มีข้อมูลความจุ)</p>';
+  let h = '<h3 style="margin:10px 0 4px;font-size:1rem">ความจุของระบบ</h3>';
+  const warn = [];
+  if (cap.cells) {
+    h += capBar(cap.cells.pct, 'ไฟล์ข้อมูล (เพดาน 10 ล้านช่อง)', cap.cells.cells.toLocaleString('th-TH') + ' ช่อง · ชีตใหญ่สุด: ' +
+      (cap.cells.top || []).slice(0, 3).map(x => esc(x.name) + ' ' + x.cells.toLocaleString('th-TH')).join(', '));
+    if (cap.cells.pct >= 85) warn.push('ไฟล์ใกล้เต็ม: รัน archiveNightly ทันที หรือลด ARCHIVE_KEEP_DAYS');
+    else if (cap.cells.pct >= 70) warn.push('ไฟล์ใช้ไปเกิน 70% ตรวจว่าตัวตั้งเวลา archiveNightly ทำงาน');
+  }
+  if (cap.drive && cap.drive.limit) {
+    const p = Math.round(cap.drive.used / cap.drive.limit * 1000) / 10;
+    h += capBar(p, 'พื้นที่ Google Drive ของบัญชีเจ้าของ (รวมรูปใบเสร็จ อีเมล)', mb(cap.drive.used) + ' จาก ' + mb(cap.drive.limit));
+    if (p >= 85) warn.push('พื้นที่ Drive ใกล้เต็ม: ย้ายรูปเก่าออก หรือเพิ่มพื้นที่');
+  }
+  const tr = cap.triggers || [];
+  const hasSync = tr.indexOf('syncBalance') > -1, hasArch = tr.indexOf('archiveNightly') > -1;
+  if (cap.triggers && (!hasSync || !hasArch)) warn.push('ยังไม่ได้ตั้งเวลางานเบื้องหลัง: ใน Apps Script เลือก setupTriggers แล้วกด Run (ครั้งเดียว)');
+  const peak = (hours || []).slice(0, 12).reduce((m, x) => Math.max(m, x.conc || 0), 0);
+  const busy = (hours || []).slice(0, 12).reduce((a, x) => a + (x.busy || 0), 0);
+  h += capBar(Math.round(peak / 30 * 1000) / 10, 'งานพร้อมกัน (เพดาน 30 งาน)', 'นาทีที่หนาแน่นที่สุดใน 12 ชม. เฉลี่ย ' + peak + ' งาน · รอคิวไม่ทัน ' + busy + ' ครั้ง');
+  if (peak >= 20) warn.push('งานพร้อมกันสูง: ช่วงพีคใกล้เพดาน 30 งานของ Google');
+  h += '<p class="hint" style="margin-top:6px">ยอดคงเหลือคำนวณล่าสุด: ' + (cap.sync ? esc(cap.sync.at) : 'ยังไม่เคย') +
+    ' · ย้ายข้อมูลเก่าล่าสุด: ' + (cap.archive ? esc(cap.archive.at) + (cap.archive.more ? ' (ยังทำไม่หมด)' : '') : 'ยังไม่เคย') +
+    ' · งานเบื้องหลัง: ' + (cap.triggers ? (hasSync ? '✓ ยอดคงเหลือทุก 5 นาที' : '✕ ยอดคงเหลือ') + ' · ' + (hasArch ? '✓ ย้ายข้อมูลทุกคืน' : '✕ ย้ายข้อมูล') : '–') + '</p>';
+  if (warn.length) h = '<div class="saved-note bad" style="margin:8px 0">⚠ ' + warn.map(esc).join('<br>⚠ ') + '</div>' + h;
+  return h;
+}
 function msTxt(ms){ return ms >= 1000 ? (ms / 1000).toFixed(1) + ' วินาที' : ms + ' ms'; }
 $('sys-load').onclick = async () => {
   const out = $('sys-out'); out.innerHTML = '<div class="empty">กำลังโหลด…</div>';
@@ -2811,7 +2896,8 @@ $('sys-load').onclick = async () => {
     const rtt = avg(mine.map(x => x.rtt)), srv = avg(mine.map(x => x.srv));
     const today = u.hours.slice(0, 12);
     const busiest = u.hours.reduce((m, h) => h.n > (m ? m.n : 0) ? h : m, null);
-    let h = '<div class="stk-sum" style="margin-top:12px">' +
+    let h = capHtml(u.capacity, u.hours);
+    h += '<div class="stk-sum" style="margin-top:12px">' +
       '<div><small>ออนไลน์ (15 นาที)</small><b>' + u.online15.length + '</b></div>' +
       '<div><small>ใช้งานใน 1 ชม.</small><b>' + u.online60 + '</b></div>' +
       '<div><small>login วันนี้</small><b>' + u.loginsToday + '</b></div>' +
@@ -2822,9 +2908,9 @@ $('sys-load').onclick = async () => {
       (u.online.length ? u.online.map(o => '<tr><td>' + esc(o.name) + '</td><td>' + esc(o.booth || '–') + '</td><td>' +
         (o.ago < 1 ? 'เมื่อสักครู่' : o.ago + ' นาที') + '</td><td>' + esc(o.fn) + '</td></tr>').join('')
         : '<tr><td colspan="4" class="empty">ยังไม่มีข้อมูล</td></tr>') + '</tbody></table></div>';
-    h += '<h3 style="margin:14px 0 6px;font-size:1rem">เวลาประมวลผลฝั่งเซิร์ฟเวอร์ รายชั่วโมง</h3><div class="table-wrap" style="margin-top:0"><table><thead><tr><th>ชั่วโมง</th><th class="n">จำนวนคำสั่ง</th><th class="n">เฉลี่ย</th><th class="n">สูงสุด</th><th class="n">ผิดพลาด</th></tr></thead><tbody>' +
+    h += '<h3 style="margin:14px 0 6px;font-size:1rem">เวลาประมวลผลฝั่งเซิร์ฟเวอร์ รายชั่วโมง</h3><div class="table-wrap" style="margin-top:0"><table><thead><tr><th>ชั่วโมง</th><th class="n">จำนวนคำสั่ง</th><th class="n">เฉลี่ย</th><th class="n">สูงสุด</th><th class="n">พร้อมกัน</th><th class="n">ผิดพลาด</th></tr></thead><tbody>' +
       (today.length ? today.map(x => '<tr><td>' + x.hour + '</td><td class="n">' + x.n + '</td><td class="n">' + msTxt(x.avg) + '</td><td class="n">' +
-        msTxt(x.max) + '</td><td class="n">' + x.err + '</td></tr>').join('') : '<tr><td colspan="5" class="empty">ยังไม่มีข้อมูล</td></tr>') + '</tbody></table></div>';
+        msTxt(x.max) + '</td><td class="n">' + (x.conc != null ? x.conc : '–') + '</td><td class="n">' + x.err + (x.busy ? ' <small>(คิว ' + x.busy + ')</small>' : '') + '</td></tr>').join('') : '<tr><td colspan="6" class="empty">ยังไม่มีข้อมูล</td></tr>') + '</tbody></table></div>';
     h += '<h3 style="margin:14px 0 6px;font-size:1rem">คำสั่งที่ใช้เวลานานที่สุด (24 ชม.)</h3><div class="table-wrap" style="margin-top:0"><table><thead><tr><th>คำสั่ง</th><th class="n">ครั้ง</th><th class="n">เฉลี่ย</th><th class="n">สูงสุด</th></tr></thead><tbody>' +
       u.slow.slice(0, 8).map(f => '<tr><td>' + esc(f.fn) + '</td><td class="n">' + f.n + '</td><td class="n">' + msTxt(f.avg) + '</td><td class="n">' + msTxt(f.max) + '</td></tr>').join('') +
       '</tbody></table></div>';
