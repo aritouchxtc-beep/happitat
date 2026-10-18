@@ -2424,8 +2424,8 @@ async function loadPending(){
       '</b> · <b style="color:' + (x.delta < 0 ? 'var(--red)' : 'var(--shelf)') + '">' + (x.delta > 0 ? '+' : '') + fmt0(x.delta) + ' ฿</b>' +
       '<br><small>' + esc(x.by) + ' · ' + esc(x.at) + ' · ' + esc(x.shift) + ' · เหตุผล: ' + esc(x.reason) + '</small>' +
       '<div style="font-size:.86rem;margin-top:4px">' + esc(x.summary) + '</div>' +
-      (r.canApprove && !isMe(x.byUser) ? '<div class="acts"><button type="button" class="btn" data-sok="1">อนุมัติ</button><button type="button" class="btn ghost" data-sok="0">ไม่อนุมัติ</button></div>'
-        : r.canApprove ? '<div class="hint" style="margin-top:6px">คำขอของคุณ · ต้องให้ Supervisor / admin คนอื่นอนุมัติ</div>' : '') + '</div>').join('') +
+      (r.canApprove && (!isMe(x.byUser) || S.role === 'admin') ? '<div class="acts"><button type="button" class="btn" data-sok="1">อนุมัติ</button><button type="button" class="btn ghost" data-sok="0">ไม่อนุมัติ</button></div>'
+        : r.canApprove ? '<div class="hint" style="margin-top:6px">คำขอของคุณ · ต้องให้ Supervisor คนอื่น หรือ admin อนุมัติ</div>' : '') + '</div>').join('') +
       list.map(x =>
       '<div class="pend" data-id="' + esc(x.id) + '"><b>' + esc(x.type) + ' ' + (x.qty > 0 ? '+' : '') + x.qty + '</b> · ' + esc(x.code) + ' ' + esc(x.desc) +
       '<br><small>' + esc(x.by) + ' · ' + esc(x.at) + ' · ' + esc(x.shift) + (x.remark ? ' · ' + esc(x.remark) : '') + '</small>' +
@@ -2724,13 +2724,13 @@ async function loadBills(){
 }
 $('bills-reload').onclick = loadBills;
 function isMe(u){ return !!u && S.profile && String(u).replace(/^0+/, '') === String(S.profile.user).replace(/^0+/, ''); }
-function selfApprove(x){ return false; }               // ทุกการแก้ไข/ยกเลิกบิล ต้องให้คนอื่นอนุมัติ
+function selfApprove(x){ return S.role === 'admin'; }  // admin มีผลทันที · Supervisor / พนักงาน ส่งขออนุมัติทุกครั้ง
 async function voidBill(x){
   const reason = (prompt('เหตุผลที่ยกเลิกบิล ' + fmt0(x.amount) + ' ฿\n(เช่น ลูกค้าเปลี่ยนใจ คืนเงิน)') || '').trim();
   if (!reason) return toast('ต้องใส่เหตุผลที่ยกเลิก', true);
   try {
     const r = await api('requestSaleChange', S.token, { booth: S.booth.id, bill: x.id, type: 'VOID', reason: reason, cid: uid() });
-    toast(r.pending ? 'ส่งคำขอยกเลิกแล้ว รอ Supervisor / admin คนอื่นอนุมัติ' : 'ยกเลิกบิลแล้ว คืนสต็อกเรียบร้อย');
+    toast(r.pending ? 'ส่งคำขอยกเลิกแล้ว รอ Supervisor คนอื่น / admin อนุมัติ' : 'ยกเลิกบิลแล้ว คืนสต็อกเรียบร้อย');
     loadBills(); refreshToday(); loadPending();
   } catch(e){ toast(e.message, true); }
 }
@@ -2782,7 +2782,7 @@ $('be-send').onclick = async () => {
   const btn = $('be-send'), label = btn.textContent; btn.disabled = true; btn.textContent = 'กำลังส่ง…';
   try {
     const r = await api('requestSaleChange', S.token, { booth: S.booth.id, bill: BE.bill.id, type: 'EDIT', reason: reason, payment: $('be-pay').value, items: items, cid: uid() });
-    toast(r.pending ? 'ส่งคำขอแก้ไขแล้ว รอ Supervisor / admin คนอื่นอนุมัติ' : 'แก้ไขบิลแล้ว');
+    toast(r.pending ? 'ส่งคำขอแก้ไขแล้ว รอ Supervisor คนอื่น / admin อนุมัติ' : 'แก้ไขบิลแล้ว');
     closeBE(); loadBills(); refreshToday(); loadPending();
   } catch(e){ toast(e.message, true); }
   finally { btn.disabled = false; btn.textContent = label; }
